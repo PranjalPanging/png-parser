@@ -1,0 +1,17 @@
+[package]
+name = "png-parser"
+version = "0.1.0"
+edition = "2025"
+authors = ["Pranjal Panging"]
+description = "A tool to inspect, strip metadata, and hide messages in PNG files."
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+
+# For PNG CRC (Cyclic Redundancy Check) calculations
+crc = "3.0"
+
+# For clean and easy error handling
+thiserror = "1.0"
+
+# For handling byte-order (Big Endian) conversions
+byteorder = "1.5"
