@@ -1,17 +1,18 @@
 [package]
-name = "png-parser"
+name = "png_parser"
 version = "0.1.0"
-edition = "2025"
+edition = "2021"
 authors = ["Pranjal Panging"]
 description = "A tool to inspect, strip metadata, and hide messages in PNG files."
+
+[lib]
+name = "png_parser"
+crate-type = ["cdylib"]
+
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
-
-# For PNG CRC (Cyclic Redundancy Check) calculations
 crc = "3.0"
-
-# For clean and easy error handling
 thiserror = "1.0"
-
-# For handling byte-order (Big Endian) conversions
 byteorder = "1.5"
+
+pyo3 = { version = "0.20", features = ["extension-module"] }
