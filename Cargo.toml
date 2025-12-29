@@ -1,18 +1,15 @@
 [package]
-name = "png_parser"
+name = "png_parser_pranjal" # Check if this name is unique on pypi.org
 version = "0.1.0"
 edition = "2021"
 authors = ["Pranjal Panging"]
-description = "A tool to inspect, strip metadata, and hide messages in PNG files."
+description = "A high-performance Rust tool to hide and read secret messages in PNG files."
+license = "MIT"
+repository = "https://github.com/PranjalPanging/png-parser"
 
 [lib]
 name = "png_parser"
 crate-type = ["cdylib"]
 
 [dependencies]
-clap = { version = "4.4", features = ["derive"] }
-crc = "3.0"
-thiserror = "1.0"
-byteorder = "1.5"
-
 pyo3 = { version = "0.23", features = ["extension-module"] }
