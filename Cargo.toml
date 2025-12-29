@@ -1,5 +1,5 @@
 [package]
-name = "png_parser_pranjal" # Check if this name is unique on pypi.org
+name = "png_parser_pranjal"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pranjal Panging"]
