@@ -17,7 +17,7 @@ A high-performance steganography tool built with **Rust** and **Python**. This l
 Once the package is uploaded to PyPI, you can install it using pip:
 
 ```bash
-pip install png_parser
+pip install png-parser
 ```
 
 ## Usage
