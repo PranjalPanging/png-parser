@@ -1,8 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write, Seek, SeekFrom};
-
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use std::io::{Read, Seek, SeekFrom, Write};
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -121,61 +118,49 @@ fn delete(file_path: String) -> String {
     }
 }
 
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn your_wasm_function() {
-    #[cfg(feature = "js")]
-    #[wasm_bindgen]
-    pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
-        use crate::chunk::Chunk;
-        use crate::chunk_type::ChunkType;
-        use crate::png::Png;
-        use std::str::FromStr;
+pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
+    use crate::chunk::Chunk;
+    use crate::chunk_type::ChunkType;
+    use crate::png::Png;
+    use std::str::FromStr;
 
-        let mut png = Png::try_from(&contents[..])
-            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    let mut png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    let chunk_type = ChunkType::from_str("stEg")
+        .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
+    let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
+    png.append_chunk(chunk);
+    Ok(png.as_bytes())
+}
 
-        let chunk_type = ChunkType::from_str("stEg")
-            .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
+    use crate::png::Png;
+    let png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    let target_chunk = png.chunks().iter()
+        .find(|c| c.chunk_type().to_string() == "stEg")
+        .ok_or_else(|| JsError::new("No hidden message found"))?;
+    let message = String::from_utf8(target_chunk.data().to_vec())
+        .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
+    Ok(message)
+}
 
-        let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
-        png.append_chunk(chunk);
-
-        Ok(png.as_bytes())
-    }
-
-    #[cfg(feature = "js")]
-    #[wasm_bindgen]
-    pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
-        use crate::png::Png;
-
-        let png = Png::try_from(&contents[..])
-            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-
-        let target_chunk = png
-            .chunks()
-            .iter()
-            .find(|c| c.chunk_type().to_string() == "stEg")
-            .ok_or_else(|| JsError::new("No hidden message found (stEg chunk missing)"))?;
-
-        let message = String::from_utf8(target_chunk.data().to_vec())
-            .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
-
-        Ok(message)
-    }
-
-    #[cfg(feature = "js")]
-    #[wasm_bindgen]
-    pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
-        use crate::png::Png;
-
-        let mut png = Png::try_from(&contents[..])
-            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-
-        png.remove_chunk("stEg");
-
-        Ok(png.as_bytes())
-    }
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen] 
+pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
+    use crate::png::Png;
+    let mut png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    png.remove_chunk("stEg");
+    Ok(png.as_bytes())
 }
 
 #[cfg(feature = "python")]
