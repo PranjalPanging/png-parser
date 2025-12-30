@@ -1,6 +1,6 @@
 [package]
 name = "png_parser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Pranjal Panging"]
 description = "A high-performance Rust tool to hide and read secret messages in PNG files."
