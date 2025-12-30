@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "png_parser"
-version = "0.1.1"
+version = "0.1.67"
 description = "A tool to inspect, strip metadata, and hide messages in PNG files."
 readme = "README.md"
 license = {text = "MIT"}

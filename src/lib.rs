@@ -1,3 +1,7 @@
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write, Seek, SeekFrom};
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "python")]
@@ -5,8 +9,8 @@ use pyo3::prelude::*;
 
 pub mod chunk;
 pub mod chunk_type;
-pub mod png;
 pub mod commands;
+pub mod png;
 
 pub use chunk::Chunk;
 pub use chunk_type::ChunkType;
@@ -24,11 +28,10 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-
 #[cfg(feature = "python")]
 #[pyfunction]
 fn hide(file_path: String, message: String) -> String {
-    let chunk_name = b"stEg"; 
+    let chunk_name = b"stEg";
 
     let mut file = match OpenOptions::new().append(true).open(&file_path) {
         Ok(f) => f,
@@ -38,10 +41,11 @@ fn hide(file_path: String, message: String) -> String {
     let bytes = message.as_bytes();
     let length = bytes.len() as u32;
 
-    if file.write_all(&length.to_be_bytes()).is_err() ||
-       file.write_all(chunk_name).is_err() || 
-       file.write_all(bytes).is_err() ||
-       file.write_all(&[0, 0, 0, 0]).is_err() {
+    if file.write_all(&length.to_be_bytes()).is_err()
+        || file.write_all(chunk_name).is_err()
+        || file.write_all(bytes).is_err()
+        || file.write_all(&[0, 0, 0, 0]).is_err()
+    {
         return "Error: Failed to write to image.".to_string();
     }
 
@@ -58,15 +62,19 @@ fn read(file_path: String) -> String {
         Err(_) => return "Error: File not found.".to_string(),
     };
 
-    let _ = file.seek(SeekFrom::Start(8)); 
+    let _ = file.seek(SeekFrom::Start(8));
 
     let mut buffer = [0u8; 4];
     loop {
-        if file.read_exact(&mut buffer).is_err() { break; }
+        if file.read_exact(&mut buffer).is_err() {
+            break;
+        }
         let length = u32::from_be_bytes(buffer);
 
         let mut type_buf = [0u8; 4];
-        if file.read_exact(&mut type_buf).is_err() { break; }
+        if file.read_exact(&mut type_buf).is_err() {
+            break;
+        }
         let chunk_type = String::from_utf8_lossy(&type_buf);
 
         if chunk_type == target_chunk {
@@ -95,12 +103,15 @@ fn delete(file_path: String) -> String {
     }
 
     let iend_signature = b"IEND";
-    
-    if let Some(pos) = contents.windows(4).position(|window| window == iend_signature) {
-        let end_of_png = pos + 8; 
-        
+
+    if let Some(pos) = contents
+        .windows(4)
+        .position(|window| window == iend_signature)
+    {
+        let end_of_png = pos + 8;
+
         let clean_png = &contents[..end_of_png];
-        
+
         if std::fs::write(&file_path, clean_png).is_err() {
             return "Error: Could not save the clean file.".to_string();
         }
@@ -110,58 +121,61 @@ fn delete(file_path: String) -> String {
     }
 }
 
-
-#[cfg(feature = "js")]
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
-    use crate::png::Png;
-    use std::str::FromStr;
-    use crate::chunk::Chunk;
-    use crate::chunk_type::ChunkType;
+pub fn your_wasm_function() {
+    #[cfg(feature = "js")]
+    #[wasm_bindgen]
+    pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
+        use crate::chunk::Chunk;
+        use crate::chunk_type::ChunkType;
+        use crate::png::Png;
+        use std::str::FromStr;
 
-    let mut png = Png::try_from(&contents[..])
-        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-    
-    let chunk_type = ChunkType::from_str("stEg")
-        .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
-    
-    let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
-    png.append_chunk(chunk);
+        let mut png = Png::try_from(&contents[..])
+            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
 
-    Ok(png.as_bytes())
-}
+        let chunk_type = ChunkType::from_str("stEg")
+            .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
 
-#[cfg(feature = "js")]
-#[wasm_bindgen]
-pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
-    use crate::png::Png;
+        let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
+        png.append_chunk(chunk);
 
-    let png = Png::try_from(&contents[..])
-        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-    
-    let target_chunk = png.chunks()
-        .iter()
-        .find(|c| c.chunk_type().to_string() == "stEg")
-        .ok_or_else(|| JsError::new("No hidden message found (stEg chunk missing)"))?;
+        Ok(png.as_bytes())
+    }
 
-    let message = String::from_utf8(target_chunk.data().to_vec())
-        .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
+    #[cfg(feature = "js")]
+    #[wasm_bindgen]
+    pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
+        use crate::png::Png;
 
-    Ok(message)
-}
+        let png = Png::try_from(&contents[..])
+            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
 
-#[cfg(feature = "js")]
-#[wasm_bindgen]
-pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
-    use crate::png::Png;
+        let target_chunk = png
+            .chunks()
+            .iter()
+            .find(|c| c.chunk_type().to_string() == "stEg")
+            .ok_or_else(|| JsError::new("No hidden message found (stEg chunk missing)"))?;
 
-    let mut png = Png::try_from(&contents[..])
-        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-    
+        let message = String::from_utf8(target_chunk.data().to_vec())
+            .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
 
-    png.remove_chunk("stEg"); 
+        Ok(message)
+    }
 
-    Ok(png.as_bytes())
+    #[cfg(feature = "js")]
+    #[wasm_bindgen]
+    pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
+        use crate::png::Png;
+
+        let mut png = Png::try_from(&contents[..])
+            .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+
+        png.remove_chunk("stEg");
+
+        Ok(png.as_bytes())
+    }
 }
 
 #[cfg(feature = "python")]

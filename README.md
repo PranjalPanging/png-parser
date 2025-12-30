@@ -1,6 +1,5 @@
 # PNG Parser (WASM & Python)
 
-[![npm version](https://img.shields.io/npm/v/@pranjalpanging/png-parser.svg)](https://www.npmjs.com/package/@pranjalpanging/png-parser)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A high-performance PNG steganography and parsing tool written in **Rust**. This project provides a unified core that is available for both **JavaScript (WebAssembly)** and **Python**.
