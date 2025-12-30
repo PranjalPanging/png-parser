@@ -9,9 +9,25 @@ repository = "https://github.com/PranjalPanging/png-parser"
 
 [lib]
 name = "png_parser"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.23", features = ["extension-module"] }
 crc = "3.0"
 thiserror = "1.0"
+
+pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[features]
+python = ["pyo3"]
+js = ["wasm-bindgen"]
+default = ["python"]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[[bin]]
+name = "png-parser-cli"
+path = "src/main.rs"
+required-features = ["python"]

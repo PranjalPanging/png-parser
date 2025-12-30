@@ -1,3 +1,8 @@
+use wasm_bindgen::prelude::*;
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 pub mod chunk;
 pub mod chunk_type;
 pub mod png;
@@ -19,10 +24,8 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-use pyo3::prelude::*;
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write, Seek, SeekFrom};
 
+#[cfg(feature = "python")]
 #[pyfunction]
 fn hide(file_path: String, message: String) -> String {
     let chunk_name = b"stEg"; 
@@ -45,6 +48,7 @@ fn hide(file_path: String, message: String) -> String {
     "Success: Message hidden!".to_string()
 }
 
+#[cfg(feature = "python")]
 #[pyfunction]
 fn read(file_path: String) -> String {
     let target_chunk = "stEg";
@@ -77,6 +81,7 @@ fn read(file_path: String) -> String {
     "Error: No secret message found.".to_string()
 }
 
+#[cfg(feature = "python")]
 #[pyfunction]
 fn delete(file_path: String) -> String {
     let mut file = match File::open(&file_path) {
@@ -105,6 +110,61 @@ fn delete(file_path: String) -> String {
     }
 }
 
+
+#[cfg(feature = "js")]
+#[wasm_bindgen]
+pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
+    use crate::png::Png;
+    use std::str::FromStr;
+    use crate::chunk::Chunk;
+    use crate::chunk_type::ChunkType;
+
+    let mut png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    
+    let chunk_type = ChunkType::from_str("stEg")
+        .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
+    
+    let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
+    png.append_chunk(chunk);
+
+    Ok(png.as_bytes())
+}
+
+#[cfg(feature = "js")]
+#[wasm_bindgen]
+pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
+    use crate::png::Png;
+
+    let png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    
+    let target_chunk = png.chunks()
+        .iter()
+        .find(|c| c.chunk_type().to_string() == "stEg")
+        .ok_or_else(|| JsError::new("No hidden message found (stEg chunk missing)"))?;
+
+    let message = String::from_utf8(target_chunk.data().to_vec())
+        .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
+
+    Ok(message)
+}
+
+#[cfg(feature = "js")]
+#[wasm_bindgen]
+pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
+    use crate::png::Png;
+
+    let mut png = Png::try_from(&contents[..])
+        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+    
+
+    png.remove_chunk("stEg"); 
+
+    Ok(png.as_bytes())
+}
+
+#[cfg(feature = "python")]
 #[pymodule]
 fn png_parser(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hide, m)?)?;
