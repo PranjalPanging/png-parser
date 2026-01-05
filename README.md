@@ -1,69 +1,58 @@
 # PNG Parser (WASM & Python)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org)
+[![WASM](https://img.shields.io/badge/wasm-compiled-blueviolet.svg)](https://webassembly.org/)
+[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-A high-performance PNG steganography and parsing tool written in **Rust**. This project provides a unified core that is available for both **JavaScript (WebAssembly)** and **Python**.
+A high-performance PNG steganography and parsing engine written in **Rust**. Securely hide, read, and manage encrypted messages within PNG files using a unified core available for both **JavaScript (WebAssembly)** and **Python**.
 
 ## 📦 Available Packages
 
-| Platform | Installation | Documentation |
+| Platform | Installation | Status |
 | :--- | :--- | :--- |
-| **JavaScript / WASM** | `npm install @pranjalpanging/png-parser` | [JS Guide](#-javascript-usage-webnode) |
-| **Python** | `pip install png-parser` | [Python Guide](#-python-usage) |
+| **JS / WASM** | `npm i @pranjalpanging/png-parser` | ✅ Published |
+| **Python** | `pip install png-parser` | ✅ Published |
 
 ---
 
 ## ✨ Features
-- **Blazing Fast**: Core logic implemented in Rust for maximum speed.
-- **Stealthy**: Uses custom PNG chunks (`stEg`) that are ignored by standard image viewers.
-- **Cross-Platform**: Run the same logic in a web browser, Node.js, or a Python script.
-- **Safe**: Includes functions to strip hidden data and restore original file integrity.
+- **Zero-Overwrite Steganography**: Uses custom `stEg` ancillary chunks that don't affect image pixels or quality.
+- **Optional AES-256-GCM Encryption**: Secure your messages with industrial-grade encryption (PBKDF2 key derivation).
+- **Automatic Detection**: Smart logic automatically detects if a message is plain text or encrypted during reading.
+- **Blazing Fast**: Core logic implemented in Rust for maximum speed and memory safety.
+- **Valid PNG Structure**: Files remain 100% compliant with PNG standards and open in any standard viewer.
 
 ---
 
-## 🚀 JavaScript Usage (Web/Node)
-This package is compiled to WebAssembly. When using it in the browser, you must initialize the WASM module first.
-
-```javascript
-import init, { hide_message, read_message } from "@pranjalpanging/png-parser";
-
-async function run() {
-    // Initialize the WASM engine
-    await init();
-
-    // Example: Reading a message from a Uint8Array (file buffer)
-    const secret = read_message(imageBuffer);
-    console.log("Hidden message:", secret);
-}
-
-run();
-```
-Note: For more detailed JS examples, check the pkg/README.md.
-
 ## 🐍 Python Usage
-Installation
-Once the package is uploaded to PyPI, install it via pip:
 
-```Bash
-pip install png-parser
-```
 ### 1. Hiding a Message
-Embed a secret string into any PNG file. This adds the data safely without corrupting the image.
-```Python
+You can hide a message as plain text or encrypt it by simply providing a password.
+
+```python
 import png_parser
 
-# Appends a hidden 'stEg' chunk to the image
-status = png_parser.hide("my_image.png", "hello world")
-print(status) # Output: Success: Message hidden!
+# Option A: Simple hiding (Plain Text)
+png_parser.hide("input.png", "Hello World")
+
+# Option B: Secure hiding (AES-256-GCM Encryption)
+png_parser.hide("input.png", "Top Secret Data", password="my_secure_password")
+
 ```
-### 2. Reading a Message
-Extract the hidden data from the image.
-```Python
 
+### 2. Reading a Message
+Extract the hidden data from the image.The parser detects the encryption flag. If you try to read an encrypted message without a password, it will return an error.
+```Python
 import png_parser
 
-secret = png_parser.read("my_image.png")
-print(f"Secret message: {secret}") # Output: Secret message: hello world
+# Decrypting an encrypted message
+secret = png_parser.read("input.png", password="my_secure_password")
+print(f"Decoded: {secret}")
+
+# Reading a plain text message
+plain = png_parser.read("input.png")
+print(f"Decoded: {plain}")
 ```
 ### 3. Deleting the Secret
 Remove the hidden chunks and restore the PNG to its original state.
@@ -72,10 +61,16 @@ Remove the hidden chunks and restore the PNG to its original state.
 import png_parser
 
 status = png_parser.delete("my_image.png")
-print(status) # Output: Success: Secret message deleted!
+print(status)
 ```
 ## 🛠 Technical Details
-This tool manipulates the PNG Chunk Structure. Every PNG consists of a series of chunks. This library inserts an Ancillary Chunk (optional data) named stEg. Standard image viewers skip chunks they don't recognize. By placing our data before the IEND marker, the file remains a valid image while carrying your hidden payload.
+The tool manipulates the **PNG Chunk Layer**. Every PNG starts with an 8-byte signature, followed by chunks like `IHDR`, `IDAT`, and `IEND`.
+### Security Protocol:
+1. **Ancillary Chunk**: We insert a non-critical chunk (`stEg`). Per PNG spec, viewers skip chunks they don't recognize.
+2. **Security Flag**: The first byte of the chunk payload is a flag:
+- `0x00`: Plain-text UTF-8 data.
+- `0x01`: AES-GCM Payload (16-byte Salt + 12-byte Nonce + Ciphertext).
+3. **Key Derivation**: We use PBKDF2-HMAC-SHA256 with 100,000 iterations to derive keys from passwords, providing strong resistance against brute-force attacks.
 
 ## 🏗 Development
 To build this project from source:

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "png-parser")]
 #[command(author = "Pranjal Panging")]
-#[command(version = "0.1.67")]
+#[command(version = "0.1.7")]
 #[command(about = "Analyzes, cleans, and hides data within PNG chunks", long_about = None)]
 struct Cli {
     #[command(subcommand)]

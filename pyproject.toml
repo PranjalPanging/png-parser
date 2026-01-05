@@ -4,18 +4,36 @@ build-backend = "maturin"
 
 [project]
 name = "png_parser"
-version = "0.1.67"
-description = "A tool to inspect, strip metadata, and hide messages in PNG files."
+version = "0.1.7"
+description = "High-performance Rust-powered tool to inspect, strip metadata, and hide messages in PNG files."
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Pranjal Panging"}]
-keywords = ["steganography", "rust", "png", "security"]
+keywords = ["steganography", "rust", "png", "security", "wasm", "encryption"]
 requires-python = ">=3.7"
+
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Security :: Cryptography",
     "Programming Language :: Rust",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 
 [project.urls]
 Homepage = "https://github.com/PranjalPanging/png-parser"
+"Bug Tracker" = "https://github.com/PranjalPanging/png-parser/issues"
+Repository = "https://github.com/PranjalPanging/png-parser.git"
+Documentation = "https://github.com/PranjalPanging/png-parser#readme"
+
+[tool.maturin]
+features = ["python"]
+module-name = "png_parser"
+binding = "pyo3"
