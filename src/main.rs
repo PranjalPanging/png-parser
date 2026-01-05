@@ -1,11 +1,11 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, Args};
 use png_parser::commands;
 use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "png-parser")]
 #[command(author = "Pranjal Panging")]
-#[command(version = "0.1.7")]
+#[command(version = "0.1.70")]
 #[command(about = "Analyzes, cleans, and hides data within PNG chunks", long_about = None)]
 struct Cli {
     #[command(subcommand)]

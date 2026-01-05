@@ -11,7 +11,7 @@ A high-performance PNG steganography and parsing engine written in **Rust**. Sec
 
 | Platform | Installation | Status |
 | :--- | :--- | :--- |
-| **JS / WASM** | `npm i @pranjalpanging/png-parser` | ✅ Published |
+| **JS / WASM** | `npm i png_parser` | ✅ Published |
 | **Python** | `pip install png-parser` | ✅ Published |
 
 ---

@@ -1,83 +1,106 @@
-# @pranjal/png-parser
+# PNG Parser (WASM)
+A high-performance PNG steganography engine written in Rust and compiled to WebAssembly. Securely hide, read, and delete encrypted messages within PNG files using custom ancillary chunks directly in the browser or Node.js.
 
-A high-performance PNG steganography library powered by **Rust** and **WebAssembly**. Hide, read, and delete secret messages within PNG images directly in the browser or Node.js.
+## 📦 Installation
 
-## Features
-- **WASM Powered**: Near-native performance for byte manipulation.
-- **Zero Dependencies**: Lightweight and secure.
-- **Browser & Node Support**: Works anywhere JavaScript runs.
-
-## Installation
-
-```bash
-npm install @pranjalpanging/png-parser
+```Bash
+npm i @pranjalpanging/png-parser
 ```
-## Usage
-### 1. Initialize and Hide a Message
-To hide a message, pass the file bytes (as a `Uint8Array`) and your secret string.
-JavaScript
-```Javascript
+
+## ✨ Features
+- **Browser Native**: Works with Uint8Array, File, and Blob APIs.
+- **AES-256-GCM Encryption**: Secure your messages with industrial-grade encryption.
+- **Non-Destructive**: Messages are stored in a custom stEg chunk. The image pixels remain untouched, and the file stays a valid PNG.
+- **Blazing Fast**: Near-native execution speed powered by the Rust core.
+
+## 🚀 Usage Example (Browser)
+Since WASM handles raw bytes, you need to convert your files to Uint8Array before processing.
+
+1. Initialize & Hide a Message
+```JavaScript
 import init, { hide_js } from "@pranjalpanging/png-parser";
 
-async function run() {
-    // Initialize the WASM module (required for web target)
-    await init();
+async function encryptImage() {
+    await init(); // Initialize the WASM module
+
+    const fileInput = document.getElementById('myFile');
+    const file = fileInput.files[0];
     
-    // Get your file as a Uint8Array (example using file input)
-    const file = document.getElementById('myFileInput').files[0];
-    const fileBytes = new Uint8Array(await file.arrayBuffer());
-    const secretMessage = "The eagle lands at midnight";
+    // Convert File to Uint8Array
+    const buffer = await file.arrayBuffer();
+    const imageBytes = new Uint8Array(buffer);
 
     try {
-        const modifiedPng = hide_js(fileBytes, secretMessage);
-        // modifiedPng is a new Uint8Array containing the hidden 'stEg' chunk
+        const message = "My Secret Message";
+        const password = "secure-password-123";
+
+        // Returns a new Uint8Array with the hidden data
+        const encryptedBytes = hide_js(imageBytes, message, password);
+
+        // Convert back to a Blob to download/display
+        const blob = new Blob([encryptedBytes], { type: "image/png" });
+        const url = URL.createObjectURL(blob);
+        window.open(url); 
     } catch (e) {
-        console.error("Failed to hide message:", e);
+        console.error("WASM Error:", e);
     }
 }
 ```
-### 2. Reading a Secret Message
-The library scans the PNG structure for the specific stEg chunk and extracts the payload.
-```Javascript
+2. Read a Hidden Message
+```JavaScript
 import { read_js } from "@pranjalpanging/png-parser";
 
-try {
-    const secret = read_js(fileBytes);
-    console.log("Secret found:", secret);
-} catch (e) {
-    console.log("No hidden message discovered in this image.");
+async function decryptImage(bytes) {
+    try {
+        // Automatically detects if encrypted or plain text
+        const secret = read_js(bytes, "secure-password-123");
+        console.log("Decoded Message:", secret);
+    } catch (e) {
+        console.error("Failed to read message:", e);
+    }
 }
 ```
-### 3. Deleting the Secret
-Removes any stEg chunks entirely, restoring the PNG to its original state.
-
+3. Delete Hidden Data
 ```JavaScript
 
 import { delete_js } from "@pranjalpanging/png-parser";
 
-try {
-    const cleanedPng = delete_js(fileBytes);
-    // Use cleanedPng as a normal PNG without the hidden metadata
-} catch (e) {
-    console.error("Error during deletion:", e);
-}
+const cleanedBytes = delete_js(imageBytes);
+// Returns PNG bytes with the 'stEg' chunk completely removed
 ```
-## How it Works
-This tool manipulates the PNG Chunk Structure. Every PNG file consists of a signature followed by a series of chunks.
+## 🛠 API Reference
 
-By inserting data into a custom Ancillary Chunk, the hidden information exists outside the "critical" image data (IHDR, IDAT). Because the chunk type starts with a lowercase letter (s), image viewers are instructed by the PNG specification to ignore it if they don't recognize it.
+| Function | Parameters | Returns | Description |
+| :--- | :--- | :--- | :--- |
+| `hide_js` | `(bytes: Uint8Array, msg: string, pass: string \| null)` | `Uint8Array` | Appends a hidden message chunk to the PNG. |
+| `read_js` | `(bytes: Uint8Array, pass: string \| null)` | `string` | Extracts and decodes the hidden message. |
+| `delete_js` | `(bytes: Uint8Array)` | `Uint8Array` | Removes the `stEg` chunk from the PNG. |
 
-## Technical Specifications
-- **Core Engine**: Rust (PNG-Me implementation)
-- **WASM Binding**: wasm-bindgen
-- **Target**: wasm32-unknown-unknown
+---
 
-## Author
+## 🏗 Development
 
-**Pranjal Panging**
+If you want to build the package yourself, follow these steps:
+
+### 1. Install Rust & wasm-pack
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf [https://sh.rustup.rs](https://sh.rustup.rs) | sh
+
+# Install wasm-pack
+npm install -g wasm-pack
+```
+
+## 🔒 Security Protocol
+- **Chunk Type**: Ancillary chunk stEg (safe to copy, safe to ignore by viewers).
+- **KDF**: PBKDF2-HMAC-SHA256 with 100,000 iterations.
+- **Encryption**: AES-256-GCM (12-byte nonce, 16-byte auth tag).
+- **Entropy**: Secure random values generated via Browser Web Crypto API.
+
+--
+Author: **Pranjal Panging**
 
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pranjalpanging)
-[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/~pranjalpanging)
 
 ## License
 

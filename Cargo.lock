@@ -146,8 +146,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -194,6 +196,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "js-sys"
+version = "0.3.83"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "464a3709c7f55f1f721e5389aa6ea4e3bc6aba669353300af094b29ffbdde1d8"
+dependencies = [
+ "once_cell",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.178"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,10 +244,11 @@ dependencies = [
 
 [[package]]
 name = "png_parser"
-version = "0.1.7"
+version = "0.1.70"
 dependencies = [
  "aes-gcm",
  "crc",
+ "getrandom",
  "hmac",
  "pbkdf2",
  "pyo3",
