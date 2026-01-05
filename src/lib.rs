@@ -28,6 +28,7 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "python")]
@@ -171,50 +172,118 @@ fn delete(file_path: String) -> String {
     }
 }
 
-
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
-#[cfg(target_arch = "wasm32")]
+
+#[cfg(feature = "js")]
 #[wasm_bindgen]
-pub fn hide_js(contents: Vec<u8>, message: &str) -> std::result::Result<Vec<u8>, JsError> {
+pub fn hide_js(contents: Vec<u8>, message: &str, password: Option<String>) -> std::result::Result<Vec<u8>, JsValue> {
+    use crate::png::Png;
     use crate::chunk::Chunk;
     use crate::chunk_type::ChunkType;
-    use crate::png::Png;
     use std::str::FromStr;
 
+    let mut payload = Vec::new();
+
+    if let Some(pw) = password.filter(|p| !p.is_empty()) {
+        payload.push(0x01);
+        let mut salt = [0u8; 16];
+        let mut nonce_bytes = [0u8; 12];
+        thread_rng().fill_bytes(&mut salt);
+        thread_rng().fill_bytes(&mut nonce_bytes);
+
+        let mut key_bytes = [0u8; 32];
+        pbkdf2_hmac::<Sha256>(pw.as_bytes(), &salt, 100_000, &mut key_bytes);
+        
+        let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+        let cipher = Aes256Gcm::new(key);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        
+        let ciphertext = cipher.encrypt(nonce, message.as_bytes())
+            .map_err(|_| JsValue::from_str("Encryption failed"))?;
+
+        payload.extend_from_slice(&salt);
+        payload.extend_from_slice(&nonce_bytes);
+        payload.extend_from_slice(&ciphertext);
+    } else {
+        payload.push(0x00);
+        payload.extend_from_slice(message.as_bytes());
+    }
+
     let mut png = Png::try_from(&contents[..])
-        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-    let chunk_type = ChunkType::from_str("stEg")
-        .map_err(|e| JsError::new(&format!("Invalid chunk type: {}", e)))?;
-    let chunk = Chunk::new(chunk_type, message.as_bytes().to_vec());
+        .map_err(|e| JsValue::from_str(&format!("Invalid PNG: {}", e)))?;
+    
+    let chunk = Chunk::new(
+        ChunkType::from_str("stEg").unwrap(),
+        payload
+    );
+    
     png.append_chunk(chunk);
     Ok(png.as_bytes())
 }
 
-#[cfg(target_arch = "wasm32")]
+
+#[cfg(feature = "js")]
 #[wasm_bindgen]
-pub fn read_js(contents: Vec<u8>) -> std::result::Result<String, JsError> {
+pub fn read_js(contents: Vec<u8>, password: Option<String>) -> std::result::Result<String, JsValue> {
     use crate::png::Png;
+
     let png = Png::try_from(&contents[..])
-        .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
-    let target_chunk = png.chunks().iter()
-        .find(|c| c.chunk_type().to_string() == "stEg")
-        .ok_or_else(|| JsError::new("No hidden message found"))?;
-    let message = String::from_utf8(target_chunk.data().to_vec())
-        .map_err(|_| JsError::new("Hidden data is not valid UTF-8"))?;
-    Ok(message)
+        .map_err(|e| JsValue::from_str(&format!("Invalid PNG: {}", e)))?;
+    
+    if let Some(chunk) = png.chunks().iter().find(|c| c.chunk_type().to_string() == "stEg") {
+        let payload = chunk.data();
+        if payload.is_empty() { return Err(JsValue::from_str("Empty chunk")); }
+
+        let flag = payload[0];
+        let data = &payload[1..];
+
+        if flag == 0x00 {
+            return Ok(String::from_utf8_lossy(data).to_string());
+        } else {
+            let pw = password.filter(|p| !p.is_empty())
+                .ok_or_else(|| JsValue::from_str("Password required for encrypted message"))?;
+
+            let salt = &data[0..16];
+            let nonce_bytes = &data[16..28];
+            let ciphertext = &data[28..];
+
+            let mut key_bytes = [0u8; 32];
+            pbkdf2_hmac::<Sha256>(pw.as_bytes(), salt, 100_000, &mut key_bytes);
+            
+            let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+            let cipher = Aes256Gcm::new(key);
+            let nonce = Nonce::from_slice(nonce_bytes);
+
+            let plaintext = cipher.decrypt(nonce, ciphertext)
+                .map_err(|_| JsValue::from_str("Incorrect password or corrupted data"))?;
+            
+            return Ok(String::from_utf8_lossy(&plaintext).to_string());
+        }
+    }
+    Err(JsValue::from_str("No secret message found"))
 }
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen] 
+
+#[cfg(feature = "js")]
+#[wasm_bindgen]
 pub fn delete_js(contents: Vec<u8>) -> std::result::Result<Vec<u8>, JsError> {
     use crate::png::Png;
     let mut png = Png::try_from(&contents[..])
         .map_err(|e| JsError::new(&format!("Failed to parse PNG: {}", e)))?;
+
+    let has_chunk = png.chunks().iter().any(|c| c.chunk_type().to_string() == "stEg");
+
+    if !has_chunk {
+        return Err(JsError::new("No hidden message found in this image"));
+    }
+
     png.remove_chunk("stEg");
+
     Ok(png.as_bytes())
 }
+
 
 #[cfg(feature = "python")]
 #[pymodule]

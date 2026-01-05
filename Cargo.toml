@@ -1,6 +1,6 @@
 [package]
 name = "png_parser"
-version = "0.1.7"
+version = "0.1.70"
 edition = "2021"
 authors = ["Pranjal Panging"]
 description = "A high-performance Rust tool to hide and read secret messages in PNG files."
@@ -23,10 +23,14 @@ rand = "0.8.5"
 pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
 [features]
-python = ["dep:pyo3"]
-js = ["dep:wasm-bindgen"]
-default = ["python"]
+python = ["pyo3"]
+js = ["wasm-bindgen"]
+default = []
+clap = { version = "4.0", features = ["derive"] }
 
 [[bin]]
 name = "png-parser-cli"
