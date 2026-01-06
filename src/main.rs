@@ -1,11 +1,11 @@
-use clap::{Parser, Subcommand, Args};
-use png_parser::commands;
+pub use clap::{Parser, Subcommand, Args};
+use png_parser::commands::mode; 
 use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "png-parser")]
 #[command(author = "Pranjal Panging")]
-#[command(version = "0.1.70")]
+#[command(version = "0.2.0")]
 #[command(about = "Analyzes, cleans, and hides data within PNG chunks", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -40,21 +40,22 @@ enum Commands {
     },
 }
 
+
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Inspect { file } => {
-            commands::inspect(file);
+            mode::inspect(file);
         }
         Commands::Strip { input, output } => {
-            commands::strip(input, output);
+            mode::strip(input, output); 
         }
         Commands::Hide { input, message, output } => {
-            commands::hide(input, message, output);
+            mode::hide(input, message, output);
         }
         Commands::Read { file, chunk_type } => {
-            commands::read(file, chunk_type);
+            mode::read(file, chunk_type); 
         }
     }
 }

@@ -136,16 +136,17 @@ export function delete_js(contents) {
  * @param {Uint8Array} contents
  * @param {string} message
  * @param {string | null} [password]
+ * @param {bigint | null} [expires_in_hours]
  * @returns {Uint8Array}
  */
-export function hide_js(contents, message, password) {
+export function hide_js(contents, message, password, expires_in_hours) {
     const ptr0 = passArray8ToWasm0(contents, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(message, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     var ptr2 = isLikeNone(password) ? 0 : passStringToWasm0(password, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len2 = WASM_VECTOR_LEN;
-    const ret = wasm.hide_js(ptr0, len0, ptr1, len1, ptr2, len2);
+    const ret = wasm.hide_js(ptr0, len0, ptr1, len1, ptr2, len2, !isLikeNone(expires_in_hours), isLikeNone(expires_in_hours) ? BigInt(0) : expires_in_hours);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
@@ -256,12 +257,20 @@ function __wbg_get_imports() {
     imports.wbg.__wbg_getRandomValues_b8f5dbd5f3995a9e = function() { return handleError(function (arg0, arg1) {
         arg0.getRandomValues(arg1);
     }, arguments) };
+    imports.wbg.__wbg_getTime_ad1e9878a735af08 = function(arg0) {
+        const ret = arg0.getTime();
+        return ret;
+    };
     imports.wbg.__wbg_length_22ac23eaec9d8053 = function(arg0) {
         const ret = arg0.length;
         return ret;
     };
     imports.wbg.__wbg_msCrypto_a61aeb35a24c1329 = function(arg0) {
         const ret = arg0.msCrypto;
+        return ret;
+    };
+    imports.wbg.__wbg_new_0_23cedd11d9b40c9d = function() {
+        const ret = new Date();
         return ret;
     };
     imports.wbg.__wbg_new_no_args_cb138f77cf6151ee = function(arg0, arg1) {
@@ -380,7 +389,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (typeof module_or_path === 'undefined') {
-        module_or_path = new URL('png_parser_bg.wasm', import.meta.url);
+        module_or_path = new URL('png-parser_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

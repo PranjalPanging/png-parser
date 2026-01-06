@@ -11,15 +11,25 @@ A high-performance PNG steganography and parsing engine written in **Rust**. Sec
 
 | Platform | Installation | Status |
 | :--- | :--- | :--- |
-| **JS / WASM** | `npm i png_parser` | ✅ Published |
+| **JS / WASM** | `npm i @pranjalpanging/png-parser` | ✅ Published |
 | **Python** | `pip install png-parser` | ✅ Published |
 
 ---
+
+## 📦 Installation
+
+To access the latest security features including **AES-256-GCM encryption** and **message expiry**, ensure you are using version `0.2.0` or later.
+
+### Python
+```bash
+pip install png-parser>=0.2.0
+```
 
 ## ✨ Features
 - **Zero-Overwrite Steganography**: Uses custom `stEg` ancillary chunks that don't affect image pixels or quality.
 - **Optional AES-256-GCM Encryption**: Secure your messages with industrial-grade encryption (PBKDF2 key derivation).
 - **Automatic Detection**: Smart logic automatically detects if a message is plain text or encrypted during reading.
+- **Time-Based Expiration (Self-Destruct)**: Set a TTL (Time-To-Live) in hours for your messages. The parser will automatically treat data as "expired" once the time limit is reached.
 - **Blazing Fast**: Core logic implemented in Rust for maximum speed and memory safety.
 - **Valid PNG Structure**: Files remain 100% compliant with PNG standards and open in any standard viewer.
 
@@ -33,26 +43,39 @@ You can hide a message as plain text or encrypt it by simply providing a passwor
 ```python
 import png_parser
 
-# Option A: Simple hiding (Plain Text)
-png_parser.hide("input.png", "Hello World")
+# Option A: Simple (Plain Text)
+# Best for metadata or simple labels.
+print(png_parser.hide("input.png", "Hello World"))
 
-# Option B: Secure hiding (AES-256-GCM Encryption)
-png_parser.hide("input.png", "Top Secret Data", password="my_secure_password")
+# Option B: Secure (AES-256-GCM Encryption)
+# Encrypts the message. Only readable with the correct password.
+print(png_parser.hide("input.png", "Secret Data", password="my_password"))
 
+# Option C: Timed (Auto-Expiry)
+# Message remains in the image but will be ignored by the reader after X hours.
+print(png_parser.hide("input.png", "Self-destructing text", expires_in_hours=2))
+
+# Option D: Maximum Security (Encryption + Expiry)
+# Encrypted and timed. This is the most secure way to share data.
+print(png_parser.hide(
+    "input.png", 
+    "Top Secret Mission", 
+    password="secure_pass_123", 
+    expires_in_hours=24
+))
 ```
 
 ### 2. Reading a Message
-Extract the hidden data from the image.The parser detects the encryption flag. If you try to read an encrypted message without a password, it will return an error.
+The parser automatically detects if a message is encrypted or expired.
 ```Python
 import png_parser
 
-# Decrypting an encrypted message
-secret = png_parser.read("input.png", password="my_secure_password")
-print(f"Decoded: {secret}")
+# To read a simple or timed message:
+print(data = png_parser.read("input.png"))
 
-# Reading a plain text message
-plain = png_parser.read("input.png")
-print(f"Decoded: {plain}")
+# To read an encrypted message (Required for Options B & D):
+# If the password is wrong or the data has expired, it returns an error/None.
+print(png_parser.read("input.png", password="secure_pass_123"))
 ```
 ### 3. Deleting the Secret
 Remove the hidden chunks and restore the PNG to its original state.
@@ -60,7 +83,7 @@ Remove the hidden chunks and restore the PNG to its original state.
 
 import png_parser
 
-status = png_parser.delete("my_image.png")
+sprint(png_parser.delete("my_image.png"))
 print(status)
 ```
 ## 🛠 Technical Details

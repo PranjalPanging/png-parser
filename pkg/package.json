@@ -1,27 +1,22 @@
 {
-  "name": "png_parser",
+  "name": "@pranjalpanging/png-parser",
   "type": "module",
-  "collaborators": [
-    "Pranjal Panging"
-  ],
+  "version": "0.1.0",
   "description": "A high-performance Rust tool to hide and read secret messages in PNG files.",
-  "version": "0.1.70",
+  "author": "Pranjal Panging",
   "license": "MIT",
+  "access": "public",
   "repository": {
     "type": "git",
-    "url": "https://github.com/PranjalPanging/png-parser"
+    "url": "git+https://github.com/pranjalpanging/png-parser.git"
   },
   "files": [
-    "png_parser_bg.wasm",
-    "png_parser.js",
-    "png_parser.d.ts"
+    "png-parser_bg.wasm",
+    "png-parser.js",
+    "png-parser.d.ts",
+    "png-parser_bg.wasm.d.ts"
   ],
-  "main": "png_parser.js",
-  "types": "png_parser.d.ts",
-  "sideEffects": [
-    "./snippets/*"
-  ],
-  "dependencies": {
-    "png_parser": "^0.1.70"
-  }
+  "main": "png-parser.js",
+  "types": "png-parser.d.ts",
+  "sideEffects": false
 }
