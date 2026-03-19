@@ -1,119 +1,329 @@
-# PNG Parser (WASM & Python)
+# png-parser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org)
 [![WASM](https://img.shields.io/badge/wasm-compiled-blueviolet.svg)](https://webassembly.org/)
-[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![npm](https://img.shields.io/badge/npm-%40pranjalpanging%2Fpng--parser-red.svg)](https://www.npmjs.com/package/@pranjalpanging/png-parser)
 
-A high-performance PNG steganography and parsing engine written in **Rust**. Securely hide, read, and manage encrypted messages within PNG files using a unified core available for both **JavaScript (WebAssembly)** and **Python**.
+Hide any file inside an image — compress, encrypt, embed.  
+A high-performance steganography engine written in Rust, available for both Python and JavaScript (WebAssembly).
 
-## 📦 Available Packages
+## Packages
 
-| Platform | Installation | Status |
-| :--- | :--- | :--- |
-| **JS / WASM** | `npm i @pranjalpanging/png-parser` | ✅ Published |
+| Platform | Install | Status |
+|---|---|---|
 | **Python** | `pip install png-parser` | ✅ Published |
+| **JS / WASM** | `npm i @pranjalpanging/png-parser` | ✅ Published |
 
 ---
 
-## 📦 Installation
+## What's new in v0.3.0
 
-To access the latest security features including **AES-256-GCM encryption** and **message expiry**, ensure you are using version `0.2.0` or later.
+| Feature | v0.2 | v0.3 |
+|---|---|---|
+| Payload | Text strings only | **Any file** (PDF, ZIP, video, …) |
+| Key derivation | PBKDF2-SHA256 | **Argon2id** (memory-hard) |
+| Compression | None | **zstd level 19** |
+| Salt | 16 bytes | **32 bytes** |
+| Image formats | PNG only | **PNG, BMP, TIFF, WebP** |
+| Embed modes | Chunk only | **Chunk + Pixel (adaptive LSB)** |
+| Expiry | Hours only | **Days + hours + minutes + seconds** |
+| Delete | Unprotected | **Password-protected** |
+| New functions | — | `info`, `verify`, `reencrypt`, `capacity`, `fingerprint`, `split`, `merge` |
 
-### Python
-```bash
-pip install png-parser>=0.2.0
+---
+
+## How it works
+```
+hide:   file → zstd compress → AES-256-GCM encrypt → embed into image
+reveal: extract from image → decrypt → decompress → restore file
 ```
 
-## ✨ Features
-- **Zero-Overwrite Steganography**: Uses custom `stEg` ancillary chunks that don't affect image pixels or quality.
-- **Optional AES-256-GCM Encryption**: Secure your messages with industrial-grade encryption (PBKDF2 key derivation).
-- **Automatic Detection**: Smart logic automatically detects if a message is plain text or encrypted during reading.
-- **Time-Based Expiration (Self-Destruct)**: Set a TTL (Time-To-Live) in hours for your messages. The parser will automatically treat data as "expired" once the time limit is reached.
-- **Blazing Fast**: Core logic implemented in Rust for maximum speed and memory safety.
-- **Valid PNG Structure**: Files remain 100% compliant with PNG standards and open in any standard viewer.
+Two embedding modes:
+
+| Mode | Method | Pixel change | Formats |
+|---|---|---|---|
+| `chunk` (default) | Custom `stEg` ancillary chunk | **None** | PNG, BMP, TIFF, WebP |
+| `pixel` | Adaptive LSB (high-texture only) | LSB of R/G/B only | PNG, BMP, TIFF |
 
 ---
 
-## 🐍 Python Usage
+## Python
 
-### 1. Hiding a Message
-You can hide a message as plain text or encrypt it by simply providing a password.
+### Install
+```bash
+pip install png-parser>=0.3.0
+```
 
+### Hide a file
 ```python
 import png_parser
 
-# Option A: Simple (Plain Text)
-# Best for metadata or simple labels.
-print(png_parser.hide("input.png", "Hello World"))
+# Plain — no password
+png_parser.hide("photo.png", "out.png", "document.pdf")
 
-# Option B: Secure (AES-256-GCM Encryption)
-# Encrypts the message. Only readable with the correct password.
-print(png_parser.hide("input.png", "Secret Data", password="my_password"))
+# Encrypted
+png_parser.hide("photo.png", "out.png", "document.pdf",
+    password="my-password")
 
-# Option C: Timed (Auto-Expiry)
-# Message remains in the image but will be ignored by the reader after X hours.
-print(png_parser.hide("input.png", "Self-destructing text", expires_in_hours=2))
+# Encrypted + expires in 1 day 6 hours 30 minutes
+png_parser.hide("photo.png", "out.png", "document.pdf",
+    password="my-password",
+    expires_days=1, expires_hours=6, expires_minutes=30)
 
-# Option D: Maximum Security (Encryption + Expiry)
-# Encrypted and timed. This is the most secure way to share data.
-print(png_parser.hide(
-    "input.png", 
-    "Top Secret Mission", 
-    password="secure_pass_123", 
-    expires_in_hours=24
-))
+# Pixel mode (embeds in image pixels instead of chunk)
+png_parser.hide("photo.png", "out.png", "document.pdf",
+    password="my-password",
+    mode="pixel")
 ```
 
-### 2. Reading a Message
-The parser automatically detects if a message is encrypted or expired.
-```Python
-import png_parser
-
-# To read a simple or timed message:
-print(data = png_parser.read("input.png"))
-
-# To read an encrypted message (Required for Options B & D):
-# If the password is wrong or the data has expired, it returns an error/None.
-print(png_parser.read("input.png", password="secure_pass_123"))
+### Reveal a file
+```python
+# output_path can be a directory — original filename is restored
+result = png_parser.reveal("out.png", "./extracted/", password="my-password")
+print(result)  # ./extracted/document.pdf
 ```
-### 3. Deleting the Secret
-Remove the hidden chunks and restore the PNG to its original state.
-```Python
 
-import png_parser
-
-sprint(png_parser.delete("my_image.png"))
-print(status)
+### Inspect without extracting
+```python
+info = png_parser.info("out.png", password="my-password")
+# {
+#   "has_payload": true,
+#   "encrypted": true,
+#   "filename": "document.pdf",
+#   "file_size": 204800,
+#   "mode": "chunk",
+#   "expires_at": "unix:1742000000",
+#   "fingerprint": "a3f9c1d2..."
+# }
 ```
-## 🛠 Technical Details
-The tool manipulates the **PNG Chunk Layer**. Every PNG starts with an 8-byte signature, followed by chunks like `IHDR`, `IDAT`, and `IEND`.
-### Security Protocol:
-1. **Ancillary Chunk**: We insert a non-critical chunk (`stEg`). Per PNG spec, viewers skip chunks they don't recognize.
-2. **Security Flag**: The first byte of the chunk payload is a flag:
-- `0x00`: Plain-text UTF-8 data.
-- `0x01`: AES-GCM Payload (16-byte Salt + 12-byte Nonce + Ciphertext).
-3. **Key Derivation**: We use PBKDF2-HMAC-SHA256 with 100,000 iterations to derive keys from passwords, providing strong resistance against brute-force attacks.
 
-## 🏗 Development
-To build this project from source:
-- Rust (Cargo)
-- Maturin (for Python: pip install maturin)
-- wasm-pack (for JS: npm install -g wasm-pack)
+### Other functions
+```python
+# Check password without extracting
+ok = png_parser.verify("out.png", "my-password")  # True / False
 
-Build Python:
-```Bash
-maturin develop
+# Delete payload (password required if encrypted)
+png_parser.delete("out.png", "clean.png", password="my-password")
+
+# Change password without extracting file
+png_parser.reencrypt("out.png", "new.png",
+    old_password="old", new_password="new")
+
+# Check capacity before hiding
+bytes_available = png_parser.capacity("photo.png", mode="chunk")
+print(f"{bytes_available:,} bytes available")
+
+# Fingerprint — identify payload without password
+fp = png_parser.fingerprint("out.png")
+
+# Split a large file across multiple images
+shards = png_parser.split(
+    "bigfile.zip",
+    ["photo1.png", "photo2.png", "photo3.png"],
+    "./shards/",
+    password="my-password",
+    expires_days=7,
+)
+
+# Reassemble — shards can be in any order
+png_parser.merge(shards, "./output/", password="my-password")
 ```
-Build WASM:
-```Bash
+
+---
+
+## JavaScript / WASM
+
+### Install
+```bash
+npm i @pranjalpanging/png-parser
+```
+
+### Hide a file
+```javascript
+import init, { hide_js, reveal_js, info_js, verify_js,
+               delete_js, reencrypt_js, fingerprint_js,
+               capacity_js } from '@pranjalpanging/png-parser';
+
+await init();
+
+// imageBytes and fileBytes are Uint8Array
+const stego = hide_js(
+    imageBytes,   // carrier image bytes
+    fileBytes,    // file to hide
+    "secret.pdf", // original filename
+    "password",   // encryption password (or null)
+    "chunk",      // mode: "chunk" or "pixel"
+    null,         // expires_days
+    null,         // expires_hours
+    null,         // expires_minutes
+    null          // expires_seconds
+);
+// stego is Uint8Array — the output image bytes
+```
+
+### Reveal a file
+```javascript
+// Returns Uint8Array of the hidden file bytes
+const fileBytes = reveal_js(stegoBytes, "password");
+
+// Save it in the browser
+const blob = new Blob([fileBytes]);
+const url  = URL.createObjectURL(blob);
+const a    = document.createElement("a");
+a.href     = url;
+a.download = "secret.pdf";
+a.click();
+```
+
+### Inspect without extracting
+```javascript
+// Returns a JSON string
+const meta = JSON.parse(info_js(stegoBytes, "password"));
+console.log(meta.filename);   // "secret.pdf"
+console.log(meta.file_size);  // 204800
+console.log(meta.expires_at); // "unix:1742000000" or "permanent"
+```
+
+### Other functions
+```javascript
+// Verify password
+const ok = verify_js(stegoBytes, "password"); // true / false
+
+// Delete payload (password required if encrypted)
+const cleanBytes = delete_js(stegoBytes, "password");
+
+// Change password
+const newBytes = reencrypt_js(stegoBytes, "old-password", "new-password");
+
+// Fingerprint
+const fp = fingerprint_js(stegoBytes);
+
+// Capacity
+const bytes = capacity_js(imageBytes, "chunk");
+```
+
+### Full browser example
+```html
+<!DOCTYPE html>
+<html>
+<body>
+  <input type="file" id="carrier" accept="image/*">
+  <input type="file" id="secret">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="hideFile()">Hide</button>
+
+  <script type="module">
+    import init, { hide_js } from './pkg/png_parser.js';
+    await init();
+
+    window.hideFile = async () => {
+      const carrier  = document.getElementById("carrier").files[0];
+      const secret   = document.getElementById("secret").files[0];
+      const password = document.getElementById("password").value;
+
+      const carrierBytes = new Uint8Array(await carrier.arrayBuffer());
+      const secretBytes  = new Uint8Array(await secret.arrayBuffer());
+
+      const result = hide_js(
+          carrierBytes, secretBytes, secret.name,
+          password || null, "chunk",
+          null, null, null, null
+      );
+
+      const blob = new Blob([result], { type: "image/png" });
+      const a    = document.createElement("a");
+      a.href     = URL.createObjectURL(blob);
+      a.download = "stego_" + carrier.name;
+      a.click();
+    };
+  </script>
+</body>
+</html>
+```
+
+---
+
+## Supported formats
+
+| Format | Chunk mode | Pixel mode | Notes |
+|---|---|---|---|
+| PNG | ✅ | ✅ | Recommended |
+| BMP | ✅ | ✅ | |
+| TIFF | ✅ | ✅ | |
+| WebP | ✅ | ❌ | Chunk mode only |
+| JPEG | ❌ | ❌ | Lossy — rejected |
+
+---
+
+## Security
+
+| Component | Detail |
+|---|---|
+| Cipher | AES-256-GCM (authenticated encryption) |
+| KDF | Argon2id (memory-hard, GPU-resistant) |
+| Salt | 32 bytes, random per operation |
+| Nonce | 12 bytes, random per operation |
+| Compression | zstd level 19 before encryption |
+| Header | Filename + expiry inside ciphertext — tamper-proof |
+| Delete | Payload zeroed before removal |
+
+---
+
+## Build from source
+
+**Requirements:**
+- Rust stable
+- Python 3.8+ (for Python build)
+- `pip install maturin`
+- `npm install -g wasm-pack` (for WASM build)
+```bash
+# Python
+maturin develop --release
+
+# WASM
 wasm-pack build --target web
+
+# CLI
+cargo build --release --no-default-features
 ```
 
-**Pranjal Panging**
+---
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pranjalpanging)
+## CLI
+```bash
+# Hide
+png-parser-cli hide -i photo.png -f secret.pdf -o out.png -p password --days 1 --hours 6
+
+# Reveal
+png-parser-cli reveal -i out.png -o ./extracted/ -p password
+
+# Info
+png-parser-cli info -i out.png -p password
+
+# Verify password
+png-parser-cli verify -i out.png -p password
+
+# Delete
+png-parser-cli delete -i out.png -o clean.png -p password
+
+# Change password
+png-parser-cli reencrypt -i out.png -o new.png --old-password abc --new-password xyz
+
+# Capacity
+png-parser-cli capacity -i photo.png --mode pixel
+
+# Split across multiple images
+png-parser-cli split -f bigfile.zip -c photo1.png photo2.png photo3.png -o ./shards/ -p password
+
+# Merge shards
+png-parser-cli merge -i shards/shard_0_photo1.png shards/shard_1_photo2.png -o ./output/ -p password
+```
+
+---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE)
+MIT — [Pranjal Panging](https://github.com/pranjalpanging)
+```
