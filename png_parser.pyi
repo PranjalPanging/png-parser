@@ -1,39 +1,71 @@
-def hide(input_img: str, output_img: str, file_path: str,
-         password: str | None = None,
-         expires_days: int | None = None,
-         expires_hours: int | None = None,
-         expires_minutes: int | None = None,
-         expires_seconds: int | None = None,
-         mode: str = "chunk") -> str: ...
+from typing import Optional
 
-def read(input_img: str, output_path: str,
-         password: str | None = None) -> dict: ...
+def hide(
+    input_path:      str,
+    output_path:     str,
+    file_path:       str,
+    password:        Optional[str] = None,
+    mode_str:        str = "chunk",
+    expires_days:    Optional[int] = None,
+    expires_hours:   Optional[int] = None,
+    expires_minutes: Optional[int] = None,
+    expires_seconds: Optional[int] = None,
+) -> None: ...
 
-def info(input_img: str,
-         password: str | None = None) -> dict: ...
+def reveal(
+    input_path:  str,
+    output_path: str,
+    password:    Optional[str] = None,
+) -> str: ...
 
-def verify(input_img: str, password: str) -> bool: ...
+def info(
+    input_path: str,
+    password:   Optional[str] = None,
+) -> str: ...
 
-def delete(input_img: str, output_img: str,
-           password: str | None = None) -> str: ...
+def verify(
+    input_path: str,
+    password:   str,
+) -> bool: ...
 
-def reencrypt(input_img: str, old_password: str,
-              new_password: str, output_img: str) -> str: ...
+def delete(
+    input_path:  str,
+    output_path: str,
+    password:    Optional[str] = None,
+) -> None: ...
 
-def capacity(input_img: str, mode: str = "chunk") -> int: ...
+def reencrypt(
+    input_path:   str,
+    output_path:  str,
+    old_password: str,
+    new_password: str,
+) -> None: ...
 
-def fingerprint(input_img: str) -> str: ...
+def capacity(
+    input_path: str,
+    mode_str:   str = "chunk",
+) -> int: ...
 
-def batch_hide(input_imgs: list[str], output_dir: str,
-               file_path: str, password: str | None = None,
-               **expiry) -> list[dict]: ...
+def fingerprint(
+    input_path: str,
+) -> str: ...
 
-def batch_read(input_imgs: list[str], output_dir: str,
-               password: str | None = None) -> list[dict]: ...
+def split(
+    file_path:       str,
+    carriers:        list[str],
+    output_dir:      str,
+    password:        Optional[str] = None,
+    expires_days:    Optional[int] = None,
+    expires_hours:   Optional[int] = None,
+    expires_minutes: Optional[int] = None,
+    expires_seconds: Optional[int] = None,
+) -> list[str]: ...
 
-def split(file_path: str, carrier_imgs: list[str],
-          output_dir: str, password: str | None = None,
-          **expiry) -> list[str]: ...
+def merge(
+    inputs:      list[str],
+    output_path: str,
+    password:    Optional[str] = None,
+) -> str: ...
 
-def merge(input_imgs: list[str], output_path: str,
-          password: str | None = None) -> str: ...
+__version__: str
+
