@@ -141,17 +141,20 @@ impl PayloadHeader {
         Ok(blob)
     }
 
-    pub fn unpack(blob: &[u8]) -> Result<(Self, &[u8]), Box<dyn std::error::Error>> {
-        if blob.len() < 4 {
-            return Err("Blob too short to contain header length".into());
-        }
-        let header_len = u32::from_be_bytes(blob[..4].try_into()?) as usize;
-        let header_end = 4 + header_len;
-        if blob.len() < header_end {
-            return Err("Blob too short — header length field is corrupt".into());
-        }
-        let header = Self::from_bytes(&blob[4..header_end])?;
-        let file_bytes = &blob[header_end..];
-        Ok((header, file_bytes))
+    pub fn unpack(blob: &[u8]) -> crate::error::Result<(Self, &[u8])> {
+    if blob.len() < 4 {
+        return Err(crate::error::Error::CorruptHeader);
     }
+    let header_len = u32::from_be_bytes(
+        blob[..4].try_into().map_err(|_| crate::error::Error::CorruptHeader)?
+    ) as usize;
+    let header_end = 4 + header_len;
+    if blob.len() < header_end {
+        return Err(crate::error::Error::CorruptHeader);
+    }
+    let header = Self::from_bytes(&blob[4..header_end])
+        .map_err(|e| crate::error::Error::Serialisation(e.to_string()))?;
+    let file_bytes = &blob[header_end..];
+    Ok((header, file_bytes))
+}
 }

@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 use std::fmt;
 
 use crate::chunk::Chunk;
-use crate::chunk_type::ChunkType;
 use crate::error::{Error, Result};
 
 

@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use image::DynamicImage;
-
 use crate::chunk::Chunk;
 use crate::chunk_type::ChunkType;
 use crate::error::{Error, Result};

@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Pranjal Panging" }]
 keywords = ["steganography", "rust", "png", "encryption", "security", "wasm", "argon2"]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.15"
 
 classifiers = [
     "Development Status :: 4 - Beta",

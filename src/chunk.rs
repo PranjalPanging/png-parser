@@ -90,8 +90,8 @@ impl TryFrom<&[u8]> for Chunk {
             .map_err(|_| Error::TruncatedChunk)?;
 
         let chunk_type = ChunkType::try_from(type_bytes)
-            .map_err(|e| Error::InvalidChunkType(e.to_string()))?;
-
+            .map_err(|_| Error::InvalidChunkType("invalid bytes".to_string()))?;
+        
         let data_end = 8 + length;
 
         if bytes.len() < data_end + 4 {

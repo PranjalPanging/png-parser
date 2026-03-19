@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImage, GenericImageView, RgbaImage};
+use image::{DynamicImage, RgbaImage};
 
 use crate::error::{Error, Result};
 const LENGTH_PREFIX_PIXELS: usize = 64;
