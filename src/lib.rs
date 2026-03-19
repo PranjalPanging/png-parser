@@ -12,7 +12,7 @@ pub mod png;
 use pyo3::prelude::*;
 
 #[cfg(feature = "python")]
-use crate::commands::mode::{self, PayloadInfo};
+use crate::commands::mode;
 
 #[cfg(feature = "python")]
 #[pyfunction]

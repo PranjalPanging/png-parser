@@ -203,50 +203,41 @@ fn main() {
 
 fn run_hide(args: HideArgs) -> Result<(), String> {
     mode::hide(
-        path(&args.input),
-        path(&args.file),
-        path(&args.output),
+        p(&args.input),
+        p(&args.file),
+        p(&args.output),
         args.password.as_deref(),
         &args.mode,
         args.expiry.to_tuple(),
     ).map_err(|e| e.to_string())?;
-
-    println!(
-        "Hidden '{}' in '{}' → '{}'",
-        path(&args.file),
-        path(&args.input),
-        path(&args.output),
-    );
+    println!("Hidden '{}' in '{}' → '{}'", p(&args.file), p(&args.input), p(&args.output));
     Ok(())
 }
 
 fn run_reveal(args: RevealArgs) -> Result<(), String> {
-    let filename = mode::reveal(
-        args.input,
-        args.output,
-        args.password,
+    let info = mode::reveal(
+        p(&args.input),
+        p(&args.output),
+        args.password.as_deref(),
     ).map_err(|e| e.to_string())?;
-
-    println!("Revealed: {}", filename);
+    println!("Revealed: {}", info);
     Ok(())
 }
 
 fn run_info(args: InfoArgs) -> Result<(), String> {
     let info = mode::info(
-        args.input,
-        args.password,
+        p(&args.input),
+        args.password.as_deref(),
     ).map_err(|e| e.to_string())?;
-
     println!("{}", info);
     Ok(())
 }
 
 fn run_verify(args: VerifyArgs) -> Result<(), String> {
     let ok = mode::verify(
-        args.input,
-        args.password,
+        p(&args.input),
+        &args.password,
     ).map_err(|e| e.to_string())?;
-
     if ok {
         println!("Password correct.");
     } else {
@@ -258,76 +249,65 @@ fn run_verify(args: VerifyArgs) -> Result<(), String> {
 
 fn run_delete(args: DeleteArgs) -> Result<(), String> {
     mode::delete(
-        args.input,
-        args.output,
-        args.password,
+        p(&args.input),
+        p(&args.output),
+        args.password.as_deref(),
     ).map_err(|e| e.to_string())?;
-
-    println!(
-        "Payload removed → '{}'",
-        args.output.display(),
-    );
+    println!("Payload removed from '{}' → '{}'", p(&args.input), p(&args.output));
     Ok(())
 }
 
 fn run_reencrypt(args: ReencryptArgs) -> Result<(), String> {
     mode::reencrypt(
-        args.input,
-        args.output,
-        args.old_password,
-        args.new_password,
+        p(&args.input),
+        p(&args.output),
+        &args.old_password,
+        &args.new_password,
     ).map_err(|e| e.to_string())?;
-
-    println!("Re-encrypted → '{}'", args.output.display());
+    println!("Re-encrypted '{}' → '{}'", p(&args.input), p(&args.output));
     Ok(())
 }
 
 fn run_capacity(args: CapacityArgs) -> Result<(), String> {
     let bytes = mode::capacity(
-        args.input,
-        args.mode.clone(),
+        p(&args.input),
+        &args.mode,
     ).map_err(|e| e.to_string())?;
-
-    println!(
-        "{} can hold {} bytes ({} KB) in {} mode",
-        args.input.display(),
-        bytes,
-        bytes / 1024,
-        args.mode,
-    );
+    println!("{} can hold {} bytes ({} KB) in {} mode",
+        p(&args.input), bytes, bytes / 1024, args.mode);
     Ok(())
 }
 
 fn run_fingerprint(args: FingerprintArgs) -> Result<(), String> {
-    let fp = mode::fingerprint(
-        args.input,
-    ).map_err(|e| e.to_string())?;
-
+    let fp = mode::fingerprint(p(&args.input))
+        .map_err(|e| e.to_string())?;
     println!("Fingerprint: {}", fp);
     Ok(())
 }
 
 fn run_inspect(args: InspectArgs) -> Result<(), String> {
-    mode::inspect(args.input)
+    mode::inspect(p(&args.input))
         .map_err(|e| e.to_string())
 }
 
 fn run_strip(args: StripArgs) -> Result<(), String> {
-    mode::strip(
-        args.input,
-        args.output,
-    ).map_err(|e| e.to_string())?;
-
-    println!("Metadata stripped → '{}'", args.output.display());
+    mode::strip(p(&args.input), p(&args.output))
+        .map_err(|e| e.to_string())?;
+    println!("Metadata stripped '{}' → '{}'", p(&args.input), p(&args.output));
     Ok(())
 }
 
 fn run_split(args: SplitArgs) -> Result<(), String> {
+    let carriers: Vec<&str> = args.carriers
+        .iter()
+        .map(|p| p.to_str().unwrap_or(""))
+        .collect();
+
     let outputs = mode::split(
-        args.file,
-        args.carriers,
-        args.output_dir,
-        args.password,
+        p(&args.file),
+        &carriers,
+        p(&args.output_dir),
+        args.password.as_deref(),
         args.expiry.to_tuple(),
     ).map_err(|e| e.to_string())?;
 
@@ -339,12 +319,24 @@ fn run_split(args: SplitArgs) -> Result<(), String> {
 }
 
 fn run_merge(args: MergeArgs) -> Result<(), String> {
+    let inputs: Vec<&str> = args.inputs
+        .iter()
+        .map(|p| p.to_str().unwrap_or(""))
+        .collect();
+
     let output = mode::merge(
-        args.inputs,
-        args.output,
-        args.password,
+        &inputs,
+        p(&args.output),
+        args.password.as_deref(),
     ).map_err(|e| e.to_string())?;
 
     println!("Merged → '{}'", output);
     Ok(())
+}
+
+fn p(pb: &PathBuf) -> &str {
+    pb.to_str().unwrap_or_else(|| {
+        eprintln!("Error: path contains non-UTF-8 characters");
+        process::exit(1);
+    })
 }
