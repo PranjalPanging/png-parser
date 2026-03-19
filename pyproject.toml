@@ -1,28 +1,30 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
 name = "png_parser"
-version = "0.2.0"
-description = "High-performance Rust-powered tool to inspect, strip metadata, and hide messages in PNG files."
+version = "0.3.0"
+description = "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed. Rust-powered."
 readme = "README.md"
-license = {text = "MIT"}
-authors = [{name = "Pranjal Panging"}]
-keywords = ["steganography", "rust", "png", "security", "wasm", "encryption"]
-requires-python = ">=3.7"
+license = { text = "MIT" }
+authors = [{ name = "Pranjal Panging" }]
+keywords = ["steganography", "rust", "png", "encryption", "security", "wasm", "argon2"]
+requires-python = ">=3.8"
 
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Topic :: Security :: Cryptography",
+    "Topic :: Multimedia :: Graphics",
     "Programming Language :: Rust",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -32,8 +34,11 @@ Homepage = "https://github.com/PranjalPanging/png-parser"
 "Bug Tracker" = "https://github.com/PranjalPanging/png-parser/issues"
 Repository = "https://github.com/PranjalPanging/png-parser.git"
 Documentation = "https://github.com/PranjalPanging/png-parser#readme"
+Changelog = "https://github.com/PranjalPanging/png-parser/releases"
 
 [tool.maturin]
 features = ["python"]
 module-name = "png_parser"
 binding = "pyo3"
+python-source = "python"
+strip = true

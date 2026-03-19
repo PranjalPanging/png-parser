@@ -105,6 +105,7 @@ fn hide(
     "Success: E2EE message hidden!".to_string()
 }
 
+
 #[cfg(feature = "python")]
 #[pyfunction]
 #[pyo3(signature = (file_path, password=None))]
@@ -208,6 +209,8 @@ fn delete(file_path: String) -> String {
         "Error: Valid PNG structure not found (no IEND chunk).".to_string()
     }
 }
+
+
 
 
 #[cfg(feature = "js")]

@@ -1,9 +1,9 @@
 [package]
 name = "png_parser"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Pranjal Panging"]
-description = "A high-performance Rust tool to hide and read secret messages in PNG files."
+description = "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed."
 license = "MIT"
 repository = "https://github.com/PranjalPanging/png-parser"
 
@@ -14,15 +14,25 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 crc = "3.0"
 thiserror = "1.0"
-aes-gcm = "0.10.3"
-pbkdf2 = "0.12.2"
-hmac = "0.12.1"
-sha2 = "0.10.8"
-rand = "0.8.5"
-chrono = "0.4"
-pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
+aes-gcm = "0.10"
+argon2 = "0.5"
+sha2 = "0.10"
+rand = "0.8"
+zstd = { version = "0.13", default-features = false }
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
+image = { version = "0.25", default-features = false, features = [
+    "png",
+    "bmp",
+    "tiff",
+    "webp",
+] }
+
+pyo3 = { version = "0.21", features = ["extension-module"], optional = true }
+
 wasm-bindgen = { version = "0.2", optional = true }
-clap = { version = "4.5.54", features = ["derive"] }
+
+clap = { version = "4", features = ["derive"] }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
@@ -35,9 +45,10 @@ default = ["python"]
 [[bin]]
 name = "png-parser-cli"
 path = "src/main.rs"
-required-features = [] 
+required-features = []
 
 [profile.release]
 opt-level = "z"
 lto = true
 codegen-units = 1
+strip = true 
