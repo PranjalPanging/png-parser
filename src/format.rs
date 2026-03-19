@@ -204,7 +204,7 @@ fn strip_bmp_trailer(bytes: &[u8]) -> &[u8] {
     }
 }
 
-const TIFF_STEG_TAG: u16 = 0xEEEE;
+const _TIFF_STEG_TAG: u16 = 0xEEEE;
 
 fn embed_tiff_tag(bytes: &[u8], payload: &[u8]) -> Result<Vec<u8>> {
     const TIFF_STEG_MAGIC: &[u8; 8] = b"stEgTIF\x00";
