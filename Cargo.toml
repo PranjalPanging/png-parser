@@ -39,7 +39,7 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 python = ["pyo3"]
-js = ["wasm-bindgen"]
+js     = ["wasm-bindgen", "js-sys"]
 default = ["python"]
 
 [[bin]]
