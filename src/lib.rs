@@ -24,8 +24,8 @@ use crate::commands::mode;
 #[pyfunction]
 #[pyo3(signature = (
     input_path,
-    file_path,
     output_path,
+    file_path,
     password=None,
     mode_str="chunk",
     expires_days=None,
@@ -35,8 +35,8 @@ use crate::commands::mode;
 ))]
 fn hide(
     input_path:      String,
-    file_path:       String,
     output_path:     String,
+    file_path:       String,
     password:        Option<String>,
     mode_str:        &str,
     expires_days:    Option<i64>,
