@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>png-parser — Steganography Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111111;
+      --border:    #222222;
+      --accent:    #00ff88;
+      --accent-dim:#00cc6a;
+      --muted:     #444444;
+      --text:      #e8e8e8;
+      --text-dim:  #888888;
+      --error:     #ff4444;
+      --warn:      #ffaa00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .mono { font-family: 'Space Mono', monospace; }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #333; }
+
+    .accent-line {
+      width: 32px;
+      height: 2px;
+      background: var(--accent);
+      display: block;
+    }
+
+    .tab {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .inp {
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      width: 100%;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .inp:focus { border-color: var(--accent); }
+    .inp::placeholder { color: var(--muted); }
+
+    .dropzone {
+      border: 1px dashed var(--border);
+      border-radius: 2px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(0,255,136,0.03);
+    }
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      outline: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-primary:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      color: #666;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover {
+      border-color: var(--text-dim);
+      color: var(--text);
+    }
+
+    .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .log {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 16px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-entry { display: flex; gap: 12px; }
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-ok   { color: var(--accent); }
+    .log-err  { color: var(--error); }
+    .log-info { color: var(--warn); }
+
+    .badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .badge-ok  { background: rgba(0,255,136,0.1); color: var(--accent); }
+    .badge-err { background: rgba(255,68,68,0.1);  color: var(--error); }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--text-dim); font-family: 'Space Mono', monospace; font-size: 11px; }
+    .info-val { color: var(--text); font-weight: 500; }
+
+    .toggle-wrap { display: flex; gap: 4px; }
+    .toggle-opt {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      cursor: pointer;
+      color: var(--text-dim);
+      background: none;
+      transition: all 0.15s;
+    }
+    .toggle-opt.active {
+      background: rgba(0,255,136,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .progress-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in { animation: slideIn 0.25s ease; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    .expiry-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    #result-panel {
+      display: none;
+    }
+    #result-panel.show {
+      display: block;
+      animation: slideIn 0.25s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+
+    <header style="border-bottom: 1px solid var(--border); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="2" width="16" height="16" rx="1" stroke="#00ff88" stroke-width="1.5"/>
+              <path d="M6 10h8M10 6v8" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span class="mono" style="font-size: 14px; letter-spacing: 0.05em;">png-parser</span>
+          </div>
+          <div class="mono" style="font-size: 10px; color: var(--text-dim); margin-top: 2px; letter-spacing: 0.1em;">STEGANOGRAPHY ENGINE v0.3.0</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="badge badge-ok">WASM READY</span>
+        <a href="https://github.com/PranjalPanging/png-parser" target="_blank" class="btn btn-ghost" style="padding: 8px 16px; text-decoration: none;">GitHub</a>
+      </div>
+    </header>
+
+    <main style="max-width: 960px; margin: 0 auto; padding: 40px 24px;">
+
+      <div style="margin-bottom: 48px;">
+        <span class="accent-line" style="margin-bottom: 16px;"></span>
+        <h1 style="font-size: 36px; font-weight: 300; line-height: 1.2; margin: 0 0 12px;">
+          Hide any file<br>
+          <span style="color: var(--accent);">inside an image.</span>
+        </h1>
+        <p style="color: var(--text-dim); font-size: 14px; max-width: 480px; line-height: 1.7; margin: 0;">
+          Compress → encrypt → embed. AES-256-GCM encryption with Argon2id key derivation.
+          Zero pixel modification in chunk mode.
+        </p>
+      </div>
+
+      <div id="wasm-warning" class="card" style="padding: 16px 20px; border-color: var(--warn); margin-bottom: 32px; display: flex; align-items: center; gap: 12px;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L14 13H2L8 2Z" stroke="#ffaa00" stroke-width="1.5"/>
+          <path d="M8 6v4M8 11.5v.5" stroke="#ffaa00" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="mono" style="font-size: 11px; color: var(--warn);">
+          Build WASM first: <code style="background: #1a1500; padding: 2px 6px; border-radius: 2px;">wasm-pack build --target web --release --no-default-features --features js</code>
+        </span>
+      </div>
+
+      <div style="border-bottom: 1px solid var(--border); margin-bottom: 32px; display: flex; gap: 0;">
+        <button class="tab active" onclick="switchTab('hide')">Hide</button>
+        <button class="tab" onclick="switchTab('reveal')">Reveal</button>
+        <button class="tab" onclick="switchTab('info')">Info</button>
+        <button class="tab" onclick="switchTab('verify')">Verify</button>
+      </div>
+
+      <div id="tab-hide" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+
+          <div>
+            <span class="label">Carrier image</span>
+            <div class="dropzone" id="carrier-drop" ondragover="dragOver(event,'carrier-drop')" ondragleave="dragLeave('carrier-drop')" ondrop="dropFile(event,'carrier-input')">
+              <input type="file" id="carrier-input" accept="image/png,image/bmp,image/tiff,image/webp" onchange="fileSelected(this,'carrier-preview','carrier-name')">
+              <div id="carrier-preview-wrap">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin: 0 auto 8px; display: block;">
+                  <rect x="2" y="6" width="28" height="20" rx="2" stroke="var(--muted)" stroke-width="1.5"/>
+                  <circle cx="11" cy="13" r="3" stroke="var(--muted)" stroke-width="1.5"/>
+                  <path d="M2 22l7-6 5 5 4-3 8 5" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+                <div class="mono" style="font-size: 11px; color: var(--muted);">PNG / BMP / TIFF / WebP</div>
+                <div id="carrier-name" style="font-size: 12px; color: var(--accent); margin-top: 6px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span class="label">Secret file</span>
+            <div class="dropzone" id="secret-drop" ondragover="dragOver(event,'secret-drop')" ondragleave="dragLeave('secret-drop')" ondrop="dropFile(event,'secret-input')">
+              <input type="file" id="secret-input" onchange="fileSelected(this,null,'secret-name')">
+              <div>
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin: 0 auto 8px; display: block;">
+                  <rect x="6" y="2" width="20" height="28" rx="2" stroke="var(--muted)" stroke-width="1.5"/>
+                  <path d="M10 10h12M10 16h12M10 22h7" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <div class="mono" style="font-size: 11px; color: var(--muted);">Any file type</div>
+                <div id="secret-name" style="font-size: 12px; color: var(--accent); margin-top: 6px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 20px; margin-bottom: 24px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+              <span class="label">Password (optional)</span>
+              <input type="password" id="hide-password" class="inp" placeholder="Leave blank for no encryption">
+            </div>
+            <div>
+              <span class="label">Embed mode</span>
+              <div class="toggle-wrap" style="margin-top: 2px;">
+                <button class="toggle-opt active" onclick="setMode('chunk',this)">Chunk</button>
+                <button class="toggle-opt" onclick="setMode('pixel',this)">Pixel</button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px;" id="mode-desc">No pixel modification — fastest</div>
+            </div>
+          </div>
+
+          <div>
+            <span class="label">Expiry (optional — all units additive)</span>
+            <div class="expiry-grid">
+              <div>
+                <input type="number" id="exp-days" class="inp" placeholder="0" min="0" style="text-align: center;">
+                <div class="mono" style="font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px;">DAYS</div>
+              </div>
+              <div>
+                <input type="number" id="exp-hours" class="inp" placeholder="0" min="0" style="text-align: center;">
+                <div class="mono" style="font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px;">HOURS</div>
+              </div>
+              <div>
+                <input type="number" id="exp-minutes" class="inp" placeholder="0" min="0" style="text-align: center;">
+                <div class="mono" style="font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px;">MINUTES</div>
+              </div>
+              <div>
+                <input type="number" id="exp-seconds" class="inp" placeholder="0" min="0" style="text-align: center;">
+                <div class="mono" style="font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px;">SECONDS</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="hide-btn" onclick="doHide()" style="width: 100%;">
+          Hide File in Image
+        </button>
+      </div>
+
+      <div id="tab-reveal" class="tab-content" style="display: none;">
+        <div style="margin-bottom: 24px;">
+          <span class="label">Stego image</span>
+          <div class="dropzone" id="reveal-drop" ondragover="dragOver(event,'reveal-drop')" ondragleave="dragLeave('reveal-drop')" ondrop="dropFile(event,'reveal-input')">
+            <input type="file" id="reveal-input" accept="image/png,image/bmp,image/tiff,image/webp" onchange="fileSelected(this,null,'reveal-name')">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin: 0 auto 8px; display: block;">
+              <rect x="2" y="6" width="28" height="20" rx="2" stroke="var(--muted)" stroke-width="1.5"/>
+              <circle cx="16" cy="16" r="5" stroke="var(--muted)" stroke-width="1.5"/>
+              <circle cx="16" cy="16" r="2" fill="var(--muted)"/>
+            </svg>
+            <div class="mono" style="font-size: 11px; color: var(--muted);">Drop stego image here</div>
+            <div id="reveal-name" style="font-size: 12px; color: var(--accent); margin-top: 6px;"></div>
+          </div>
+        </div>
+        <div style="margin-bottom: 24px;">
+          <span class="label">Password</span>
+          <input type="password" id="reveal-password" class="inp" placeholder="Leave blank if not encrypted">
+        </div>
+        <button class="btn btn-primary" onclick="doReveal()" style="width: 100%;">
+          Extract Hidden File
+        </button>
+      </div>
+
+      <div id="tab-info" class="tab-content" style="display: none;">
+        <div style="margin-bottom: 24px;">
+          <span class="label">Stego image</span>
+          <div class="dropzone" id="info-drop" ondragover="dragOver(event,'info-drop')" ondragleave="dragLeave('info-drop')" ondrop="dropFile(event,'info-input')">
+            <input type="file" id="info-input" accept="image/png,image/bmp,image/tiff,image/webp" onchange="fileSelected(this,null,'info-name')">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin: 0 auto 8px; display: block;">
+              <circle cx="16" cy="16" r="13" stroke="var(--muted)" stroke-width="1.5"/>
+              <path d="M16 11v1M16 15v6" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div class="mono" style="font-size: 11px; color: var(--muted);">Drop stego image here</div>
+            <div id="info-name" style="font-size: 12px; color: var(--accent); margin-top: 6px;"></div>
+          </div>
+        </div>
+        <div style="margin-bottom: 24px;">
+          <span class="label">Password (optional — reveals metadata if correct)</span>
+          <input type="password" id="info-password" class="inp" placeholder="Leave blank for partial info">
+        </div>
+        <button class="btn btn-primary" onclick="doInfo()" style="width: 100%; margin-bottom: 24px;">
+          Inspect Payload
+        </button>
+        <div id="info-result" style="display: none;"></div>
+      </div>
+
+      <div id="tab-verify" class="tab-content" style="display: none;">
+        <div style="margin-bottom: 24px;">
+          <span class="label">Stego image</span>
+          <div class="dropzone" id="verify-drop" ondragover="dragOver(event,'verify-drop')" ondragleave="dragLeave('verify-drop')" ondrop="dropFile(event,'verify-input')">
+            <input type="file" id="verify-input" accept="image/png,image/bmp,image/tiff,image/webp" onchange="fileSelected(this,null,'verify-name')">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin: 0 auto 8px; display: block;">
+              <path d="M6 16l7 7L26 9" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="mono" style="font-size: 11px; color: var(--muted);">Drop stego image here</div>
+            <div id="verify-name" style="font-size: 12px; color: var(--accent); margin-top: 6px;"></div>
+          </div>
+        </div>
+        <div style="margin-bottom: 24px;">
+          <span class="label">Password to verify</span>
+          <input type="password" id="verify-password" class="inp" placeholder="Enter password to check">
+        </div>
+        <button class="btn btn-primary" onclick="doVerify()" style="width: 100%; margin-bottom: 24px;">
+          Verify Password
+        </button>
+        <div id="verify-result" style="display: none;"></div>
+      </div>
+
+      <div id="result-panel" style="margin-top: 24px;">
+        <div class="card" style="padding: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span class="label" style="margin: 0;">Operation log</span>
+            <button class="btn btn-ghost" onclick="clearLog()" style="padding: 4px 12px; font-size: 10px;">Clear</button>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer style="border-top: 1px solid var(--border); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; margin-top: 40px;">
+      <div>
+        <span class="mono" style="font-size: 11px; color: var(--text-dim);">Built by </span>
+        <a href="https://github.com/pranjalpanging" target="_blank" class="mono" style="font-size: 11px; color: var(--accent); text-decoration: none;">Pranjal Panging</a>
+      </div>
+      <div style="display: flex; gap: 20px;">
+        <a href="https://pypi.org/project/png-parser/" target="_blank" class="mono" style="font-size: 10px; color: var(--text-dim); text-decoration: none; letter-spacing: 0.08em;">PYPI</a>
+        <a href="https://www.npmjs.com/package/@pranjalpanging/png-parser" target="_blank" class="mono" style="font-size: 10px; color: var(--text-dim); text-decoration: none; letter-spacing: 0.08em;">NPM</a>
+        <a href="https://github.com/PranjalPanging/png-parser" target="_blank" class="mono" style="font-size: 10px; color: var(--text-dim); text-decoration: none; letter-spacing: 0.08em;">GITHUB</a>
+      </div>
+    </footer>
+
+  </div>
+
+  <script type="module">
+    let wasm = null;
+
+    async function loadWasm() {
+      try {
+        const mod = await import('./pkg/png_parser.js');
+        await mod.default();
+        wasm = mod;
+        document.getElementById('wasm-warning').style.display = 'none';
+        document.querySelector('.badge-ok').textContent = 'WASM READY';
+        log('WASM module loaded successfully', 'ok');
+      } catch (e) {
+        log('WASM not available — build with wasm-pack first', 'err');
+      }
+    }
+
+    loadWasm();
+
+    let hideMode = 'chunk';
+
+    window.switchTab = (name) => {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${name}`).style.display = 'block';
+      event.target.classList.add('active');
+    };
+
+    window.setMode = (mode, btn) => {
+      hideMode = mode;
+      document.querySelectorAll('.toggle-opt').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('mode-desc').textContent =
+        mode === 'chunk'
+          ? 'No pixel modification — fastest'
+          : 'Adaptive LSB — high-texture pixels only';
+    };
+
+    window.dragOver = (e, id) => {
+      e.preventDefault();
+      document.getElementById(id).classList.add('drag-over');
+    };
+
+    window.dragLeave = (id) => {
+      document.getElementById(id).classList.remove('drag-over');
+    };
+
+    window.dropFile = (e, inputId) => {
+      e.preventDefault();
+      const input = document.getElementById(inputId);
+      input.files = e.dataTransfer.files;
+      input.dispatchEvent(new Event('change'));
+    };
+
+    window.fileSelected = (input, previewId, nameId) => {
+      const file = input.files[0];
+      if (!file) return;
+      document.getElementById(nameId).textContent = `${file.name} (${formatBytes(file.size)})`;
+    };
+
+    function formatBytes(b) {
+      if (b < 1024) return `${b} B`;
+      if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+      return `${(b / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function readFile(input) {
+      return new Promise((res, rej) => {
+        if (!input.files[0]) return rej('No file selected');
+        const r = new FileReader();
+        r.onload  = e => res(new Uint8Array(e.target.result));
+        r.onerror = () => rej('Failed to read file');
+        r.readAsArrayBuffer(input.files[0]);
+      });
+    }
+
+    function download(bytes, name) {
+      const blob = new Blob([bytes]);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Processing...' : btn.dataset.label || btn.textContent;
+    }
+
+    window.log = (msg, type = 'info') => {
+      const panel = document.getElementById('result-panel');
+      panel.classList.add('show');
+      const logEl  = document.getElementById('log');
+      const now    = new Date().toLocaleTimeString('en', { hour12: false });
+      const entry  = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <span class="log-time">${now}</span>
+        <span class="log-${type}">${msg}</span>
+      `;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    window.clearLog = () => {
+      document.getElementById('log').innerHTML = '';
+    };
+
+    window.doHide = async () => {
+      if (!wasm) return log('WASM not loaded', 'err');
+      const carrierInput = document.getElementById('carrier-input');
+      const secretInput  = document.getElementById('secret-input');
+      const password     = document.getElementById('hide-password').value || null;
+      const days         = parseInt(document.getElementById('exp-days').value)    || null;
+      const hours        = parseInt(document.getElementById('exp-hours').value)   || null;
+      const minutes      = parseInt(document.getElementById('exp-minutes').value) || null;
+      const seconds      = parseInt(document.getElementById('exp-seconds').value) || null;
+
+      if (!carrierInput.files[0]) return log('No carrier image selected', 'err');
+      if (!secretInput.files[0])  return log('No secret file selected', 'err');
+
+      const btn = document.getElementById('hide-btn');
+      btn.disabled    = true;
+      btn.textContent = 'Processing...';
+
+      try {
+        log(`Reading files...`, 'info');
+        const carrierBytes = await readFile(carrierInput);
+        const secretBytes  = await readFile(secretInput);
+        const filename     = secretInput.files[0].name;
+
+        log(`Hiding "${filename}" in "${carrierInput.files[0].name}"...`, 'info');
+
+        const result = wasm.hide_js(
+          carrierBytes, secretBytes, filename,
+          password, hideMode,
+          days, hours, minutes, seconds
+        );
+
+        const outName = `stego_${carrierInput.files[0].name}`;
+        download(result, outName);
+        log(`✓ Saved as "${outName}" (${formatBytes(result.length)})`, 'ok');
+        if (password) log('✓ Payload encrypted with AES-256-GCM + Argon2id', 'ok');
+        if (days || hours || minutes || seconds) {
+          log(`✓ Expires in ${[days&&`${days}d`,hours&&`${hours}h`,minutes&&`${minutes}m`,seconds&&`${seconds}s`].filter(Boolean).join(' ')}`, 'ok');
+        }
+      } catch (e) {
+        log(`✗ ${e}`, 'err');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Hide File in Image';
+      }
+    };
+
+    window.doReveal = async () => {
+      if (!wasm) return log('WASM not loaded', 'err');
+      const input    = document.getElementById('reveal-input');
+      const password = document.getElementById('reveal-password').value || null;
+
+      if (!input.files[0]) return log('No stego image selected', 'err');
+
+      try {
+        log(`Extracting from "${input.files[0].name}"...`, 'info');
+        const bytes    = await readFile(input);
+        const revealed = wasm.reveal_js(bytes, password);
+        const name     = `revealed_${Date.now()}`;
+        download(revealed, name);
+        log(`✓ Extracted ${formatBytes(revealed.length)} — saved as "${name}"`, 'ok');
+      } catch (e) {
+        log(`✗ ${e}`, 'err');
+      }
+    };
+
+    window.doInfo = async () => {
+      if (!wasm) return log('WASM not loaded', 'err');
+      const input    = document.getElementById('info-input');
+      const password = document.getElementById('info-password').value || null;
+
+      if (!input.files[0]) return log('No image selected', 'err');
+
+      try {
+        log(`Inspecting "${input.files[0].name}"...`, 'info');
+        const bytes  = await readFile(input);
+        const raw    = wasm.info_js(bytes, password);
+        const meta   = JSON.parse(raw);
+
+        const panel  = document.getElementById('info-result');
+        panel.style.display = 'block';
+        panel.innerHTML = `
+          <div class="card slide-in" style="padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span class="accent-line" style="width: 16px;"></span>
+              <span class="mono" style="font-size: 11px; letter-spacing: 0.1em; color: var(--text-dim);">PAYLOAD INFO</span>
+            </div>
+            ${row('Encrypted',   meta.encrypted ? '<span class="badge badge-ok">YES</span>' : '<span class="badge" style="background:rgba(100,100,100,0.2);color:var(--text-dim)">NO</span>')}
+            ${meta.filename  ? row('Filename',   `<span style="color:var(--accent)">${meta.filename}</span>`) : ''}
+            ${meta.file_size ? row('File size',  formatBytes(meta.file_size)) : ''}
+            ${meta.expires_at ? row('Expires',   meta.expires_at === 'permanent' ? '<span style="color:var(--text-dim)">Permanent</span>' : `<span style="color:var(--warn)">${meta.expires_at}</span>`) : ''}
+            ${row('Fingerprint', `<span class="mono" style="font-size:11px;color:var(--text-dim);word-break:break-all">${meta.fingerprint}</span>`)}
+          </div>
+        `;
+        log('✓ Payload inspected', 'ok');
+      } catch (e) {
+        log(`✗ ${e}`, 'err');
+      }
+    };
+
+    function row(key, val) {
+      return `
+        <div class="info-row">
+          <span class="info-key">${key}</span>
+          <span class="info-val">${val}</span>
+        </div>
+      `;
+    }
+
+    window.doVerify = async () => {
+      if (!wasm) return log('WASM not loaded', 'err');
+      const input    = document.getElementById('verify-input');
+      const password = document.getElementById('verify-password').value;
+
+      if (!input.files[0]) return log('No image selected', 'err');
+      if (!password)        return log('No password entered', 'err');
+
+      try {
+        log(`Verifying password for "${input.files[0].name}"...`, 'info');
+        const bytes  = await readFile(input);
+        const ok     = wasm.verify_js(bytes, password);
+
+        const panel = document.getElementById('verify-result');
+        panel.style.display = 'block';
+        panel.innerHTML = ok
+          ? `<div class="card slide-in" style="padding: 20px; border-color: var(--accent); display: flex; align-items: center; gap: 12px;">
+               <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+               <span class="mono" style="font-size: 12px; color: var(--accent);">Password is correct</span>
+             </div>`
+          : `<div class="card slide-in" style="padding: 20px; border-color: var(--error); display: flex; align-items: center; gap: 12px;">
+               <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="#ff4444" stroke-width="1.5" stroke-linecap="round"/></svg>
+               <span class="mono" style="font-size: 12px; color: var(--error);">Wrong password</span>
+             </div>`;
+
+        log(ok ? '✓ Password verified' : '✗ Wrong password', ok ? 'ok' : 'err');
+      } catch (e) {
+        log(`✗ ${e}`, 'err');
+      }
+    };
+
+  </script>
+</body>
+</html>
