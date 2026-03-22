@@ -502,7 +502,7 @@
 
     async function loadWasm() {
       try {
-        const mod = await import('../pkg/png_parser.js');
+        const mod = await import('./pkg/png_parser.js');
         await mod.default();
         wasm = mod;
         document.getElementById('wasm-warning').style.display = 'none';
