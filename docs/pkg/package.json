@@ -1,0 +1,24 @@
+{
+  "name": "@pranjalpanging/png-parser",
+  "type": "module",
+  "collaborators": [
+    "Pranjal Panging"
+  ],
+  "description": "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed.",
+  "version": "0.3.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PranjalPanging/png-parser"
+  },
+  "files": [
+    "png_parser_bg.wasm",
+    "png_parser.js",
+    "png_parser.d.ts"
+  ],
+  "main": "png_parser.js",
+  "types": "png_parser.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
