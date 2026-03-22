@@ -53,3 +53,9 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true 
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+bulk-memory,+mutable-globals,+nontrapping-fptoint"]
