@@ -1,24 +1,48 @@
 {
   "name": "@pranjalpanging/png-parser",
-  "type": "module",
-  "collaborators": [
-    "Pranjal Panging"
-  ],
-  "description": "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed.",
   "version": "0.3.0",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/PranjalPanging/png-parser"
-  },
+  "description": "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed. Rust-powered steganography engine.",
+  "main": "png_parser.js",
+  "types": "png_parser.d.ts",
   "files": [
     "png_parser_bg.wasm",
     "png_parser.js",
-    "png_parser.d.ts"
+    "png_parser.d.ts",
+    "png_parser_bg.js",
+    "package.json",
+    "README.md"
   ],
-  "main": "png_parser.js",
-  "types": "png_parser.d.ts",
-  "sideEffects": [
-    "./snippets/*"
-  ]
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PranjalPanging/png-parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PranjalPanging/png-parser/issues"
+  },
+  "keywords": [
+    "steganography",
+    "wasm",
+    "webassembly",
+    "rust",
+    "png",
+    "bmp",
+    "tiff",
+    "webp",
+    "encryption",
+    "aes",
+    "aes-256-gcm",
+    "argon2",
+    "image",
+    "hide",
+    "embed",
+    "security",
+    "cryptography"
+  ],
+  "author": {
+    "name": "Pranjal Panging",
+    "url": "https://github.com/pranjalpanging"
+  },
+  "license": "MIT",
+  "homepage": "https://pranjalpanging.github.io/png-parser/",
+  "sideEffects": false
 }
