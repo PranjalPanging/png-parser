@@ -5,19 +5,38 @@ build-backend = "maturin"
 [project]
 name = "png_parser"
 version = "0.3.0"
-description = "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed. Rust-powered."
+description = "Hide any file inside PNG/BMP/TIFF/WebP — compress, encrypt, embed. Rust-powered steganography engine."
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "Pranjal Panging" }]
-keywords = ["steganography", "rust", "png", "encryption", "security", "wasm", "argon2"]
+authors = [{ name = "Pranjal Panging"}]
+maintainers = [{ name = "Pranjal Panging"}]
+keywords = [
+    "steganography",
+    "rust",
+    "png",
+    "encryption",
+    "security",
+    "wasm",
+    "argon2",
+    "aes",
+    "bmp",
+    "tiff",
+    "webp",
+    "image",
+    "hide",
+    "embed",
+]
 requires-python = ">=3.8,<3.15"
 
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
     "Topic :: Security :: Cryptography",
     "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Image Processing",
     "Programming Language :: Rust",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -25,16 +44,24 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Environment :: WebAssembly",
+    "Typing :: Typed",
 ]
 
 [project.urls]
-Homepage = "https://github.com/PranjalPanging/png-parser"
+Homepage = "https://pranjalpanging.github.io/png-parser/"
 "Bug Tracker" = "https://github.com/PranjalPanging/png-parser/issues"
 Repository = "https://github.com/PranjalPanging/png-parser.git"
 Documentation = "https://github.com/PranjalPanging/png-parser#readme"
 Changelog = "https://github.com/PranjalPanging/png-parser/releases"
+"Source Code" = "https://github.com/PranjalPanging/png-parser"
 
 [tool.maturin]
 features = ["python"]
@@ -42,3 +69,9 @@ module-name = "png_parser"
 binding = "pyo3"
 python-source = "python"
 strip = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
