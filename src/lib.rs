@@ -1,18 +1,24 @@
-use pyo3::prelude::*;
-use crate::commands::mode;
-
-#[cfg(feature = "js")]
-use wasm_bindgen::prelude::*;
-
 pub mod chunk;
 pub mod chunk_type;
-pub mod commands;
 pub mod crypto;
 pub mod error;
 pub mod format;
 pub mod header;
 pub mod pixel;
 pub mod png;
+
+#[cfg(feature = "python")]
+pub mod commands;
+
+#[cfg(feature = "js")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "python")]
+use crate::commands::mode;
+
 
 #[cfg(feature = "python")]
 #[pyfunction]
@@ -168,8 +174,6 @@ fn png_parser(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-// ── WASM bindings ─────────────────────────────────────────────
-
 #[cfg(feature = "js")]
 #[wasm_bindgen]
 pub fn hide_js(
@@ -219,8 +223,10 @@ pub fn hide_js(
             let out = crate::pixel::embed_into_image(img, &envelope)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
             let mut buf = Vec::new();
-            out.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
-                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            out.write_to(
+                &mut std::io::Cursor::new(&mut buf),
+                image::ImageFormat::Png,
+            ).map_err(|e| JsValue::from_str(&e.to_string()))?;
             Ok(buf)
         }
     }
@@ -270,8 +276,11 @@ pub fn info_js(
     let envelope = crate::format::extract_chunk(&contents, &img_format)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let fp          = crate::crypto::fingerprint(&envelope);
-    let is_encrypted = envelope.first().map(|&b| b == crate::crypto::ENVELOPE_VERSION).unwrap_or(false);
+    let fp           = crate::crypto::fingerprint(&envelope);
+    let is_encrypted = envelope
+        .first()
+        .map(|&b| b == crate::crypto::ENVELOPE_VERSION)
+        .unwrap_or(false);
 
     if !is_encrypted {
         let (_, blob) = crate::crypto::unpack(&envelope, None)
@@ -280,10 +289,7 @@ pub fn info_js(
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         return Ok(format!(
             r#"{{"encrypted":false,"filename":"{}","file_size":{},"expires_at":"{}","fingerprint":"{}"}}"#,
-            header.filename,
-            header.file_size,
-            header.expiry.to_display(),
-            fp,
+            header.filename, header.file_size, header.expiry.to_display(), fp,
         ));
     }
 
@@ -295,10 +301,7 @@ pub fn info_js(
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
             Ok(format!(
                 r#"{{"encrypted":true,"filename":"{}","file_size":{},"expires_at":"{}","fingerprint":"{}"}}"#,
-                header.filename,
-                header.file_size,
-                header.expiry.to_display(),
-                fp,
+                header.filename, header.file_size, header.expiry.to_display(), fp,
             ))
         }
         None => Ok(format!(
@@ -330,11 +333,14 @@ pub fn delete_js(
     let envelope = crate::format::extract_chunk(&contents, &img_format)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let is_encrypted = envelope.first().map(|&b| b == crate::crypto::ENVELOPE_VERSION).unwrap_or(false);
+    let is_encrypted = envelope
+        .first()
+        .map(|&b| b == crate::crypto::ENVELOPE_VERSION)
+        .unwrap_or(false);
 
     if is_encrypted {
         match &password {
-            None => return Err(JsValue::from_str("password required to delete encrypted payload")),
+            None     => return Err(JsValue::from_str("password required to delete encrypted payload")),
             Some(pw) => {
                 if !crate::crypto::verify_password(pw, &envelope) {
                     return Err(JsValue::from_str("wrong password"));
@@ -393,9 +399,9 @@ pub fn capacity_js(contents: Vec<u8>, mode_str: &str) -> Result<usize, JsValue> 
             Ok(crate::format::chunk_capacity(&img_format))
         }
         EmbedMode::Pixel => {
-            let img = image::load_from_memory(&contents)
+            let img   = image::load_from_memory(&contents)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let rgba   = img.to_rgba8();
+            let rgba  = img.to_rgba8();
             let usable = crate::pixel::count_texture_pixels(&rgba)
                 .saturating_sub(64);
             Ok((usable * 3) / 8)
