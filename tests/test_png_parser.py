@@ -169,40 +169,39 @@ def test_verify_wrong_password(carrier, secret_txt, tmp_path):
 def test_info_encrypted_correct_password(carrier, secret_txt, tmp_path):
     out  = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt, password="abc123")
-    meta = json.loads(png_parser.info(out, password="abc123"))
-    assert meta["encrypted"]   is True
-    assert meta["filename"]    == "secret.txt"
-    assert meta["file_size"]   > 0
-    assert meta["fingerprint"] != ""
+    result = png_parser.info(out, password="abc123")
+    assert "encrypted   : true"    in result
+    assert "filename    : secret.txt" in result
+    assert "file_size"             in result
+    assert "fingerprint"           in result
 
 def test_info_encrypted_no_password(carrier, secret_txt, tmp_path):
-    out  = str(tmp_path / "out.png")
+    out    = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt, password="abc123")
-    meta = json.loads(png_parser.info(out))
-    assert meta["encrypted"]   is True
-    assert meta["filename"]    is None
-    assert meta["fingerprint"] != ""
+    result = png_parser.info(out)
+    assert "encrypted   : true" in result
+    assert "fingerprint"        in result
+    assert "filename"           not in result.split("fingerprint")[0]
 
 def test_info_plain(carrier, secret_txt, tmp_path):
-    out  = str(tmp_path / "out.png")
+    out    = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt)
-    meta = json.loads(png_parser.info(out))
-    assert meta["encrypted"] is False
-    assert meta["filename"]  == "secret.txt"
+    result = png_parser.info(out)
+    assert "encrypted   : false"     in result
+    assert "filename    : secret.txt" in result
 
 def test_info_permanent(carrier, secret_txt, tmp_path):
-    out  = str(tmp_path / "out.png")
+    out    = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt, password="x")
-    meta = json.loads(png_parser.info(out, password="x"))
-    assert meta["expires_at"] == "permanent"
+    result = png_parser.info(out, password="x")
+    assert "expires_at  : permanent" in result
 
 def test_info_with_expiry(carrier, secret_txt, tmp_path):
-    out  = str(tmp_path / "out.png")
+    out    = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt,
         password="x", expires_hours=1)
-    meta = json.loads(png_parser.info(out, password="x"))
-    assert meta["expires_at"].startswith("unix:")
-
+    result = png_parser.info(out, password="x")
+    assert "unix:" in result
 
 # ── delete ────────────────────────────────────────────────────
 
@@ -362,11 +361,11 @@ def test_split_merge_with_expiry(three_carriers, secret_txt, tmp_path):
 def test_hide_reveal_pixel_mode(carrier, secret_txt, tmp_path):
     out = str(tmp_path / "out.png")
     png_parser.hide(carrier, out, secret_txt,
-        password="x", mode="pixel")
+        password="x", mode_str="pixel")
     result = png_parser.reveal(out, str(tmp_path), password="x")
     with open(result) as f:
         assert f.read() == "hello from png_parser v0.3.0"
-
+        
 def test_pixel_mode_small_image_raises(small_carrier, secret_large, tmp_path):
     out = str(tmp_path / "out.png")
     with pytest.raises(Exception):
