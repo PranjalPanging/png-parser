@@ -3,17 +3,35 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 use argon2::Argon2;
+use flate2::Compression;
+use flate2::read::ZlibDecoder;
+use flate2::write::ZlibEncoder;
 use rand::{thread_rng, RngCore};
+use std::io::{Read, Write};
 
 use crate::error::{Error, Result};
 
-pub const ENVELOPE_VERSION: u8 = 0x03;
-
-pub const SALT_LEN:    usize = 32;
-pub const NONCE_LEN:   usize = 12;
-pub const CT_LEN_SIZE: usize = 8;
-
+pub const ENVELOPE_VERSION:    u8    = 0x03;
+pub const SALT_LEN:            usize = 32;
+pub const NONCE_LEN:           usize = 12;
+pub const CT_LEN_SIZE:         usize = 8;
 pub const ENVELOPE_HEADER_LEN: usize = 1 + SALT_LEN + NONCE_LEN + CT_LEN_SIZE;
+
+fn compress(data: &[u8]) -> Result<Vec<u8>> {
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(data)
+        .map_err(|e| Error::CompressionFailed(e.to_string()))?;
+    encoder.finish()
+        .map_err(|e| Error::CompressionFailed(e.to_string()))
+}
+
+fn decompress(data: &[u8]) -> Result<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(data);
+    let mut out     = Vec::new();
+    decoder.read_to_end(&mut out)
+        .map_err(|e| Error::DecompressionFailed(e.to_string()))?;
+    Ok(out)
+}
 
 fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; 32]> {
     let mut key = [0u8; 32];
@@ -29,10 +47,9 @@ pub fn encrypt(password: &str, plaintext: &[u8]) -> Result<Vec<u8>> {
     thread_rng().fill_bytes(&mut salt);
     thread_rng().fill_bytes(&mut nonce_bytes);
 
-    let key_bytes = derive_key(password, &salt)?;
-    let cipher    = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key_bytes));
-    let nonce     = Nonce::from_slice(&nonce_bytes);
-
+    let key_bytes  = derive_key(password, &salt)?;
+    let cipher     = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key_bytes));
+    let nonce      = Nonce::from_slice(&nonce_bytes);
     let ciphertext = cipher
         .encrypt(nonce, plaintext)
         .map_err(|_| Error::EncryptionFailed)?;
@@ -43,7 +60,6 @@ pub fn encrypt(password: &str, plaintext: &[u8]) -> Result<Vec<u8>> {
     envelope.extend_from_slice(&nonce_bytes);
     envelope.extend_from_slice(&(ciphertext.len() as u64).to_be_bytes());
     envelope.extend_from_slice(&ciphertext);
-
     Ok(envelope)
 }
 
@@ -60,8 +76,8 @@ pub fn decrypt(password: &str, envelope: &[u8]) -> Result<Vec<u8>> {
         });
     }
 
-    let salt       = &envelope[1..1 + SALT_LEN];
-    let nonce_off  = 1 + SALT_LEN;
+    let salt        = &envelope[1..1 + SALT_LEN];
+    let nonce_off   = 1 + SALT_LEN;
     let nonce_bytes = &envelope[nonce_off..nonce_off + NONCE_LEN];
     let ct_len_off  = nonce_off + NONCE_LEN;
     let ct_len      = u64::from_be_bytes(
@@ -69,17 +85,16 @@ pub fn decrypt(password: &str, envelope: &[u8]) -> Result<Vec<u8>> {
             .try_into()
             .map_err(|_| Error::CorruptHeader)?,
     ) as usize;
-    let ct_start = ct_len_off + CT_LEN_SIZE;
+    let ct_start   = ct_len_off + CT_LEN_SIZE;
 
     if envelope.len() < ct_start + ct_len {
         return Err(Error::TruncatedChunk);
     }
 
     let ciphertext = &envelope[ct_start..ct_start + ct_len];
-
-    let key_bytes = derive_key(password, salt)?;
-    let cipher    = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key_bytes));
-    let nonce     = Nonce::from_slice(nonce_bytes);
+    let key_bytes  = derive_key(password, salt)?;
+    let cipher     = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key_bytes));
+    let nonce      = Nonce::from_slice(nonce_bytes);
 
     cipher
         .decrypt(nonce, ciphertext)
@@ -91,17 +106,13 @@ pub fn verify_password(password: &str, envelope: &[u8]) -> bool {
 }
 
 pub fn compress_and_encrypt(password: &str, plaintext: &[u8]) -> Result<Vec<u8>> {
-    let compressed = zstd::stream::encode_all(plaintext, 19)
-        .map_err(|e| Error::CompressionFailed(e.to_string()))?;
-
+    let compressed = compress(plaintext)?;
     encrypt(password, &compressed)
 }
 
 pub fn decrypt_and_decompress(password: &str, envelope: &[u8]) -> Result<Vec<u8>> {
     let compressed = decrypt(password, envelope)?;
-
-    zstd::stream::decode_all(compressed.as_slice())
-        .map_err(|e| Error::DecompressionFailed(e.to_string()))
+    decompress(&compressed)
 }
 
 pub fn reencrypt(
@@ -122,9 +133,8 @@ pub fn fingerprint(envelope: &[u8]) -> String {
 }
 
 pub fn compress_only(plaintext: &[u8]) -> Result<Vec<u8>> {
-    let mut out = vec![0x00u8];
-    let compressed = zstd::stream::encode_all(plaintext, 19)
-        .map_err(|e| Error::CompressionFailed(e.to_string()))?;
+    let mut out        = vec![0x00u8];
+    let compressed     = compress(plaintext)?;
     out.extend_from_slice(&compressed);
     Ok(out)
 }
@@ -133,8 +143,7 @@ pub fn decompress_only(data: &[u8]) -> Result<Vec<u8>> {
     if data.is_empty() || data[0] != 0x00 {
         return Err(Error::CorruptHeader);
     }
-    zstd::stream::decode_all(&data[1..])
-        .map_err(|e| Error::DecompressionFailed(e.to_string()))
+    decompress(&data[1..])
 }
 
 pub fn unpack(
@@ -144,19 +153,16 @@ pub fn unpack(
     if raw.is_empty() {
         return Err(Error::CorruptHeader);
     }
-
     match raw[0] {
         0x00 => {
             let plaintext = decompress_only(raw)?;
             Ok((false, plaintext))
         }
-
         ENVELOPE_VERSION => {
-            let pw = password.ok_or(Error::PasswordRequired)?;
+            let pw        = password.ok_or(Error::PasswordRequired)?;
             let plaintext = decrypt_and_decompress(pw, raw)?;
             Ok((true, plaintext))
         }
-
         v => Err(Error::UnsupportedVersion {
             found:     v,
             supported: ENVELOPE_VERSION,
@@ -164,10 +170,7 @@ pub fn unpack(
     }
 }
 
-pub fn pack(
-    plaintext: &[u8],
-    password:  Option<&str>,
-) -> Result<Vec<u8>> {
+pub fn pack(plaintext: &[u8], password: Option<&str>) -> Result<Vec<u8>> {
     match password {
         Some(pw) => compress_and_encrypt(pw, plaintext),
         None     => compress_only(plaintext),
